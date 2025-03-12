@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>index</title>
+</head>
+<body>
+    <a>
+        hello world!
+        <button>
+            return
+        </button>
+        <script>
+            /*예제용 리턴 버튼. 연결 종료 메시지 리턴*/
+            const disconnectButton = document.getElementById('disconnectButton');
+
+            disconnectButton .addEventListener('click',() => {
+                fetch('/disconnect')
+                    .then(response => response.text())
+                    .then(message => {
+                        alert(message);
+                    })
+                    .catch(error => console.error('Error :', error))
+            })
+        </script>
+    </a>
+</body>
+</html>
