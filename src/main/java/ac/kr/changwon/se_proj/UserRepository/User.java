@@ -11,7 +11,9 @@ import lombok.Setter;
 * password : for login Authenticate
 * email : just e-mail*/
 public class User {
-    private String name;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private String id;
     private String username;
     private String password;
