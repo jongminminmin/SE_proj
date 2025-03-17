@@ -20,8 +20,16 @@ figma에서 제공하는 기본 페이지 디자인을 바탕으로 색상 및 �
 
 
 ---
-## 모든 업데이트 사항은 commit 후 push
-## 업데이트 진행 후, 
+## 모든 업데이트 사항은 commit 후 push(푸시는 업데이트 사항을 깃허브 리포지토리에 업데이트)
+## pull로 로컬에 가져 온 후 업데이트. 그리고 push(pull은 업데이트 된 내용을 로컬에 가져오는 명령어)
+
+**git bash에서**
+    
+**업데이트 사항 커밋 : git commit -m "업데이트 내용" <branch 코드>**
+    
+**풀 명령어 : git pull origin master**
+    
+**푸시 명령어 : git push origin master**
 
 --- 
 
@@ -40,4 +48,5 @@ figma에서 제공하는 기본 페이지 디자인을 바탕으로 색상 및 �
 - chat 테이블
   - **작성필요**
 
-#모든 업데이트 사항은 commit 후 push 또는 pull
+
+    
