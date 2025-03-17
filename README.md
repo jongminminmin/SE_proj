@@ -19,5 +19,25 @@
 figma에서 제공하는 기본 페이지 디자인을 바탕으로 색상 및 기능 구현
 
 
+---
+## 모든 업데이트 사항은 commit 후 push
+## 업데이트 진행 후, 
+
+--- 
+
+# 데이터베이스 구조
+- user table
+  - user_id (String)
+  - username(닉네임, String)
+  - password(비밀번호, String)
+  - email(이메일, String)
+
+- content
+  - id(사용자 id. 외래키 : user의 user_id)
+  - title(내용 제목, String)
+  - content(내용, String)
+  - timestamp(기본값 : 시스템 시간(현재시간))
+- chat 테이블
+  - **작성필요**
 
 #모든 업데이트 사항은 commit 후 push 또는 pull
