@@ -15,7 +15,7 @@ import java.util.Optional;
 @Service
 public class LoginService {
 
-    private static final String SECRET_KEY =" ";
+    private static final String SECRET_KEY ="1234";
 
     @Autowired
     private UserRepository userRepository;
