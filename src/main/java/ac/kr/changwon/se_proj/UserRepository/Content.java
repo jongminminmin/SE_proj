@@ -2,8 +2,6 @@ package ac.kr.changwon.se_proj.UserRepository;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 
 /* 컨텐츠 인스턴스*/
 
