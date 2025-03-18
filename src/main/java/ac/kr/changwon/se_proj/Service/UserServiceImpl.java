@@ -19,10 +19,18 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void createUser(User user) {
+        String id = user.getId();
+        String username = user.getUsername();
         String encodedPassword = passwordEncoder.encode(user.getPassword());
         user.setPassword(encodedPassword);
-        userRepository.save(user);
+        User newUser = new User();
+        newUser.setId(id);
+        newUser.setUsername(username);
+        newUser.setPassword(encodedPassword);
+        userRepository.save(newUser);
     }
+
+
 
     @Override
     public boolean findById(String userId, String password) {
@@ -38,5 +46,26 @@ public class UserServiceImpl implements UserService {
         }
 
         return true;
+    }
+
+    @Override
+    public void searchUser(User user) {
+        Optional<User> loginUser = userRepository.findById(user.getId());
+        if(loginUser.isEmpty()) {
+            System.out.println("User not found");
+        }
+        else {
+
+        }
+    }
+
+    @Override
+    public void updateUser(User user) {
+
+    }
+
+    @Override
+    public void deleteUser(String userId, String password) {
+
     }
 }

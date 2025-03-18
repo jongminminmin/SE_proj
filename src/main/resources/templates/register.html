@@ -27,7 +27,8 @@
         }
 
         input[type="text"],
-        input[type="password"] {
+        input[type="password"]
+        {
             width: 100%;
             padding: 10px;
             margin: 10px 0;
@@ -50,11 +51,14 @@
 <div class="container">
     <h2>Register</h2>
     <form id="registerForm">
-        <label for="username">ID:</label>
-        <input type="text" id="username" name="username" required>
+        <label for="id">ID:</label>
+        <input type="text" id="id" name="id" required>
 
         <label for="password">Password:</label>
         <input type="password" id="password" name="password" required>
+
+        <label for="username">Nickname:</label>
+        <input type="text" id="username" name="username" required>
 
         <button type="submit">Register</button>
     </form>
@@ -70,8 +74,8 @@
 
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
-
-        const data = { username: username, password: password };
+        const id = document.getElementById('id').value;
+        const data = { username: username, password: password, id: id };
 
         fetch('/register', {
             method: 'POST',

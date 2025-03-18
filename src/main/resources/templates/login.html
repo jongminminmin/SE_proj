@@ -90,7 +90,8 @@
             .then(response => {
                 if (response.ok) {
                     return response.text(); // get token
-                } else {
+                }
+                else {
                     window.location.href = '/login?error=true'; // show error message
                     throw new Error('Login failed');
                 }

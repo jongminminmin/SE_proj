@@ -15,7 +15,7 @@ public class Content {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    private String id;
+    private String user_id;
 
     @Column(nullable = false)
     private String title;
