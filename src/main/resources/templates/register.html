@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Page</title>
+    <title>Register Page</title>
     <style>
         body {
             font-family: sans-serif;
@@ -48,39 +48,32 @@
 </head>
 <body>
 <div class="container">
-    <h2>Login</h2>
-
-    <!-- Error message will be shown here -->
-    <div th:if="${param.error}" style="color: red;">
-        Invalid ID or Password
-    </div>
-
-    <form id="loginForm">
-        <label for="id">ID:</label>
-        <input type="text" id="id" name="id" required>
+    <h2>Register</h2>
+    <form id="registerForm">
+        <label for="username">ID:</label>
+        <input type="text" id="username" name="username" required>
 
         <label for="password">Password:</label>
         <input type="password" id="password" name="password" required>
 
-        <button type="submit">Login</button>
+        <button type="submit">Register</button>
     </form>
-
-    <h3>Don't have Account?</h3>
-    <a href="/register">signup</a>
+    <h3>Do you have Account?</h3>
+    <a href="/login">Login</a>
 </div>
 
 <script>
-    const form = document.getElementById('loginForm');
+    const form = document.getElementById('registerForm');
 
     form.addEventListener('submit', function(event) {
         event.preventDefault(); // Prevent default form submission
 
-        const id = document.getElementById('id').value;
+        const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
 
-        const data = { id: id, password: password };
+        const data = { username: username, password: password };
 
-        fetch('/login', {
+        fetch('/register', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -89,19 +82,18 @@
         })
             .then(response => {
                 if (response.ok) {
-                    return response.text(); // get token
+                    return response.text();
                 } else {
-                    window.location.href = '/login?error=true'; // show error message
-                    throw new Error('Login failed');
+                    throw new Error('Register failed');
                 }
             })
-            .then(token => {
-                // If you want to use the token, you can save it in a cookie or local storage
-                console.log('Token:', token);
-                window.location.href = '/'; // redirect to root path
+            .then(result => {
+                console.log('Result:', result);
+                window.location.href = '/login'; //redirect to login page
             })
             .catch(error => {
                 console.error('Error:', error);
+                alert('Register failed');
             });
     });
 </script>

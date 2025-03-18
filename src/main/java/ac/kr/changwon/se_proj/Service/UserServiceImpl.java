@@ -28,8 +28,12 @@ public class UserServiceImpl implements UserService {
     public boolean findById(String userId, String password) {
         Optional<User> loginUser = userRepository.findById(userId);
 
-        if(!passwordEncoder.matches(password, loginUser.get().getPassword())){
-            System.out.println("비밀번호가 일치하지 않습니다.");
+        if(loginUser.isEmpty()) {
+            return false;
+        }
+
+        if(!passwordEncoder.matches(password, loginUser.get().getPassword())) {
+            System.out.println("Password unmatched");
             return false;
         }
 

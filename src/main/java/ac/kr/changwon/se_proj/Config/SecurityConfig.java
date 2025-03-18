@@ -24,7 +24,9 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests((authz) -> authz
                         .requestMatchers("/public/**").permitAll()
-                        .requestMatchers("/login").permitAll() // Allow access to /login without authentication
+                        .requestMatchers("/login").permitAll()
+                        .requestMatchers("/register").permitAll()// Allow access to /login without authentication
+                        .requestMatchers("/").permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)) //Changed from stateless
                 .csrf(AbstractHttpConfigurer::disable)

@@ -11,7 +11,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 
 /* 로그인 컨트롤러
 * 요청 시 로그인 페이지로 이동 */
@@ -24,9 +23,11 @@ public class LoginController {
     @Autowired
     private LoginService loginService;
 
+
+    /*로그인 시 ID와 비밀번호를 userRepository에서 검색 후 일치하는 사용자만 welcome page로 리디렉션*/
     @GetMapping("/login")
     public String login(){
-        logger.info("login");
+
         return "login";
     }
 

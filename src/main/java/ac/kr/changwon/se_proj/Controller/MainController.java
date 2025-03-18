@@ -20,7 +20,7 @@ public class MainController {
     @Autowired
     private ChatService chatService;
 
-    @PostMapping("/content")
+    @PostMapping("/index")
     public Content createContent(@RequestBody Content content){
         return contentRepository.save(content);
     }
