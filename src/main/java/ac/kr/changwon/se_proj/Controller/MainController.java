@@ -2,7 +2,7 @@ package ac.kr.changwon.se_proj.Controller;
 
 import ac.kr.changwon.se_proj.Repository.ChatRepository;
 import ac.kr.changwon.se_proj.Repository.ContentRepository;
-import ac.kr.changwon.se_proj.Service.ChatService;
+import ac.kr.changwon.se_proj.Service.impl.ChatServiceImpl;
 import ac.kr.changwon.se_proj.UserRepository.Content;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,7 +18,7 @@ public class MainController {
     @Autowired
     private ContentRepository contentRepository;
     @Autowired
-    private ChatService chatService;
+    private ChatServiceImpl chatServiceImpl;
 
     @PostMapping("/index")
     public Content createContent(@RequestBody Content content){
@@ -31,7 +31,7 @@ public class MainController {
     @PostMapping("/simpleChatService")
     public String handleChatService(@RequestBody String message){
        try {
-           chatService.sendMessage(message);
+           chatServiceImpl.sendMessage(message);
            return "success";
        }
        catch (Exception e){

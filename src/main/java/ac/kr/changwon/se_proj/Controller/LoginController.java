@@ -1,7 +1,9 @@
 package ac.kr.changwon.se_proj.Controller;
 
 import ac.kr.changwon.se_proj.Model.LoginRequest;
-import ac.kr.changwon.se_proj.Service.LoginService;
+import ac.kr.changwon.se_proj.Repository.UserRepository;
+import ac.kr.changwon.se_proj.Service.Interface.UserService;
+import ac.kr.changwon.se_proj.UserRepository.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,11 +25,18 @@ public class LoginController {
     @Autowired
     private LoginService loginService;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private UserService userService;
+
+    private User user;
+
 
     /*로그인 시 ID와 비밀번호를 userRepository에서 검색 후 일치하는 사용자만 welcome page로 리디렉션*/
     @GetMapping("/login")
-    public String login(){
-
+    public String login() {
         return "login";
     }
 
@@ -39,11 +48,9 @@ public class LoginController {
             logger.info("Login successful for user: {}", loginRequest.getId());
 
             return ResponseEntity.ok(token);
-        }
-        else {
+        } else {
             logger.warn("Failed login attempt for user: {}", loginRequest.getId());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid ID/Password");
         }
     }
-
 }

@@ -1,7 +1,5 @@
 package ac.kr.changwon.se_proj.UserRepository;
 
-import ac.kr.changwon.se_proj.Repository.UserRepository;
-import ac.kr.changwon.se_proj.Service.UserService;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -23,18 +21,22 @@ public class User{
 
     private String password;
 
-
     private String email;
 
     /*비밀번호 검증 메서드*/
-    public boolean checkPassword(String password) {
+
+    /*public boolean checkPassword(String password) {
         return this.password.equals(password);
-    }
+    }*/
 
     /*무결성을 위한 메서드*/
-    public boolean isAvailable() {
+
+    /*public boolean isAvailable() {
         return true;
-    }
+    }*/
+
+    //위 메서드들은 여기서 필요없는 것 같아서 삭제
+    //해당 기능은 UserService에서 구현
 
 
 

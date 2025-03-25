@@ -3,7 +3,7 @@ package ac.kr.changwon.se_proj.Controller;
 
 import ac.kr.changwon.se_proj.Model.RegisterRequest;
 import ac.kr.changwon.se_proj.Repository.UserRepository;
-import ac.kr.changwon.se_proj.Service.UserService;
+import ac.kr.changwon.se_proj.Service.Interface.UserService;
 import ac.kr.changwon.se_proj.UserRepository.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

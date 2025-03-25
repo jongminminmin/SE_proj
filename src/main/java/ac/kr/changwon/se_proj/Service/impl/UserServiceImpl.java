@@ -1,6 +1,7 @@
-package ac.kr.changwon.se_proj.Service;
+package ac.kr.changwon.se_proj.Service.impl;
 
 import ac.kr.changwon.se_proj.Repository.UserRepository;
+import ac.kr.changwon.se_proj.Service.Interface.UserService;
 import ac.kr.changwon.se_proj.UserRepository.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,8 +21,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public void createUser(User user) {
         String id = user.getId();
+        String password = user.getPassword();
         String username = user.getUsername();
-        String encodedPassword = passwordEncoder.encode(user.getPassword());
+        String encodedPassword = passwordEncoder.encode(password);
         user.setPassword(encodedPassword);
         User newUser = new User();
         newUser.setId(id);
@@ -29,8 +31,6 @@ public class UserServiceImpl implements UserService {
         newUser.setPassword(encodedPassword);
         userRepository.save(newUser);
     }
-
-
 
     @Override
     public boolean findById(String userId, String password) {
@@ -67,5 +67,15 @@ public class UserServiceImpl implements UserService {
     @Override
     public void deleteUser(String userId, String password) {
 
+    }
+
+    @Override
+    public boolean checkPassword(String password) {
+        return false;
+    }
+
+    @Override
+    public boolean isAvailable() {
+        return true;
     }
 }
