@@ -85,3 +85,49 @@ Intelij IDE 사용시 어플리케이션 프로퍼티에 작성해놓은 드라�
 비밀번호는 둘 다 1234로 동일.
 
 데이터베이스는 projdata 사용.
+
+
+
+--- 
+***데이터베이스 쿼리문***
+
+CREATE TABLE user(
+id varchar(25) NOT NULL UNIQUE PRIMARY KEY ,
+password varchar(50) NOT NULL,
+username varchar(36) NOT NULL UNIQUE ,
+email varchar(50)
+);
+
+CREATE TABLE project(
+project_id int PRIMARY KEY NOT NULL ,
+project_title varchar(100),
+description varchar(1000),
+owner_id varchar(25) NOT NULL ,
+date DATE default SYSDATE(),
+project_member_tier varchar(5) NOT NULL ,
+constraint foreign key (owner_id) references user(id)
+);
+
+CREATE TABLE chat(
+user_id varchar(25) NOT NULL,
+content varchar(5000),
+username varchar(36) NOT NULL UNIQUE ,
+timestamp date default SYSDATE(),
+room_id int NOT NULL AUTO_INCREMENT PRIMARY KEY ,
+constraint fk_user foreign key (user_id) references user(id)
+);
+
+CREATE TABLE task(
+task_no int PRIMARY KEY NOT NULL ,
+project_title varchar(100),
+assignee_id varchar(25),
+task_title varchar(100) NOT NULL ,
+description varchar(1000),
+due_start date default SYSDATE(),
+due_end date
+);
+
+commit;
+
+ALTER TABLE chat
+MODIFY COLUMN timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
