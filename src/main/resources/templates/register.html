@@ -60,10 +60,21 @@
         <label for="username">Nickname:</label>
         <input type="text" id="username" name="username" required>
 
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email">
+
         <button type="submit">Register</button>
     </form>
     <h3>Do you have Account?</h3>
     <a href="/login">Login</a>
+
+    <a href="/oauth2/authorization/google">
+        <button type="button">Sign in with Google</button>
+    </a>
+
+    <a href="/oauth2/authorization/kakao">
+        <button>카카오로 로그인</button>
+    </a>
 </div>
 
 <script>
@@ -75,9 +86,19 @@
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
         const id = document.getElementById('id').value;
-        const data = { username: username, password: password, id: id };
+        const email = document.getElementById('email').value;
 
-        fetch('/register', {
+        // ✅ 이메일 비어있을 경우 경고 및 확인 창
+        if (!email.trim()) {
+            const proceed = confirm("이메일 입력란이 비어있습니다.\n비어있는 이메일로 회원가입 하시겠습니까?");
+            if (!proceed) {
+                return; // 제출 취소
+            }
+        }
+
+        const data = { username: username, password: password, id: id, email: email };
+
+        fetch('api/auth/register', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -87,7 +108,8 @@
             .then(response => {
                 if (response.ok) {
                     return response.text();
-                } else {
+                }
+                else {
                     throw new Error('Register failed');
                 }
             })
