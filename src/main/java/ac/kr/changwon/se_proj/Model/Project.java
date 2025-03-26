@@ -32,3 +32,7 @@ public class Project {
     private String projectMemberTier;
 
 }
+
+/* 프로젝트 생성 시
+* Project p=new Project
+* p.setOwner(adminUser)*/
