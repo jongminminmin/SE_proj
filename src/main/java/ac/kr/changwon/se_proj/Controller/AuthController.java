@@ -1,10 +1,8 @@
 package ac.kr.changwon.se_proj.Controller;
 
 import ac.kr.changwon.se_proj.Service.Interface.AuthService;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import ac.kr.changwon.se_proj.dto.UserDto;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,11 +30,14 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public Map<String, Object> register(@RequestParam String userId,
-                                        @RequestParam String username,
-                                        @RequestParam String password,
-                                        @RequestParam(required = false) String email) {
-        boolean result = authService.register(userId, username, password, email);
+    public Map<String, Object> register(@RequestBody UserDto userDto) {
+        boolean result = authService.register(
+                userDto.getId(),
+                userDto.getUsername(),
+                userDto.getPassword(),
+                userDto.getEmail()
+        );
+
         Map<String, Object> response = new HashMap<>();
         response.put("success", result);
         response.put("message", result ? "Registration successful" : "User already exists");
