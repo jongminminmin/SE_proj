@@ -1,4 +1,4 @@
-package ac.kr.changwon.se_proj.UserRepository;
+package ac.kr.changwon.se_proj.Model;
 
 import jakarta.persistence.*;
 import lombok.Data;
@@ -14,14 +14,27 @@ import lombok.Data;
 public class User{
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(nullable = false)
     private String id;
 
+    @Column(nullable = false)
     private String username;
 
+    @Column(nullable = false, unique = true)
     private String password;
 
     private String email;
+
+    public User(String userId, String username, String password, String email) {
+        this.username = username;
+        this.password = password;
+        this.email = email;
+        this.id = userId;
+    }
+
+    public User() {
+
+    }
 
     /*비밀번호 검증 메서드*/
 
@@ -44,10 +57,5 @@ public class User{
     /* 비밀번호의 경우 프론트 단에서 보안을 위해 별표 또는 가릴 수 있는
     표기로 사용자 입력 값 처리.
     들어오는 값은 실제 값(데이터베이스에 저장할 값)*/
-
-
-
-
-
 
 }

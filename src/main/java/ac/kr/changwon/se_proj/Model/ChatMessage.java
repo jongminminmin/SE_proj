@@ -1,12 +1,7 @@
 package ac.kr.changwon.se_proj.Model;
 
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Table;
-import jakarta.persistence.Column;
+import jakarta.persistence.*;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -25,17 +20,21 @@ public class ChatMessage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int roomId;
 
-    @Column(nullable = false)
-    private String userId;
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     private String content;
 
     @Column(nullable = false, unique = true)
     private String username;
 
-    @Column(columnDefinition = "DATE DEFAULT CURRENT_DATE")
+    @Temporal(TemporalType.TIMESTAMP)
     private Date timestamp;
 
-    @Column(unique = true)
-    private String fileData;
+//    @Column(unique = true) 이 테이블은 파일 데이터를 업로드 하거나
+//    다운로드 시
+//    데이터베이스에서 가져 올지 아니면 GET 메서드로 가져 올 지
+//    정해야함.
+//    private String fileData;
 }
