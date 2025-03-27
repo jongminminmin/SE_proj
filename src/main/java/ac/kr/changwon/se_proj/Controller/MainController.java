@@ -44,5 +44,10 @@ public class MainController {
         return "register";
     }
 
+    @GetMapping("/chat")
+    public String chatPage(){
+        return "chat";
+    }
+
 
 }

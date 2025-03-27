@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 @Data
 public class ChatMessageDTO {
     private String senderId;
+    private int roomId;
+    private String content;
     private String receiverId;
     private String message;
     private LocalDateTime timestamp;
