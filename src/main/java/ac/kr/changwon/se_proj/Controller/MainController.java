@@ -1,9 +1,7 @@
 package ac.kr.changwon.se_proj.Controller;
 
-import ac.kr.changwon.se_proj.Model.Project;
 import ac.kr.changwon.se_proj.Service.Interface.ProjectService;
 import ac.kr.changwon.se_proj.Service.Interface.TaskService;
-import ac.kr.changwon.se_proj.Service.Interface.UserService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
