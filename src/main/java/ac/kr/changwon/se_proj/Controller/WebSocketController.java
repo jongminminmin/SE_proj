@@ -53,19 +53,6 @@ public class WebSocketController {
         return message;
     }
 
-    /**
-     * 채팅 페이지 렌더링 시 현재 로그인된 사용자 ID 전달
-     */
-    @GetMapping("/chat")
-    public String chatPage(Principal principal, Model model) {
 
-        if (principal != null) {
-            model.addAttribute("loginUserId", principal.getName());
-        }
-        else {
-            model.addAttribute("loginUserId", "anonymous");
-        }
-        return "chat";
-    }
 
 }
