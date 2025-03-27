@@ -11,7 +11,10 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
 
+import java.security.Principal;
 import java.time.LocalDateTime;
 
 @Controller
@@ -22,7 +25,9 @@ public class WebSocketController {
     private final ChatMessageRepository chatMessageRepository;
     private final UserRepository userRepository;
 
-
+    /**
+     * WebSocket 메시지 수신 처리
+     */
     @MessageMapping("/chat.sendMessage")
     public ChatMessageDTO sendMessage(@Payload ChatMessageDTO message) {
         User sender = userRepository.findById(message.getSenderId()).orElse(null);
@@ -37,18 +42,30 @@ public class WebSocketController {
         chat.setUsername(sender.getUsername());
         chat.setTimestamp(LocalDateTime.now());
         chat.setReceiverId(message.getReceiverId());
-        chat.setRoomId(Integer.parseInt(String.valueOf(message.getRoomId()))); // roomId 저장
+        chat.setRoomId(message.getRoomId());
 
         chatMessageRepository.save(chat);
 
-
-        // 클라이언트로 전송될 데이터 구성
+        // 메시지 DTO에 타임스탬프 세팅해서 수신자에게 전송
         message.setTimestamp(chat.getTimestamp());
-
         messagingTemplate.convertAndSend("/topic/private/" + message.getReceiverId(), message);
 
         return message;
+    }
 
+    /**
+     * 채팅 페이지 렌더링 시 현재 로그인된 사용자 ID 전달
+     */
+    @GetMapping("/chat")
+    public String chatPage(Principal principal, Model model) {
+
+        if (principal != null) {
+            model.addAttribute("loginUserId", principal.getName());
+        }
+        else {
+            model.addAttribute("loginUserId", "anonymous");
+        }
+        return "chat";
     }
 
 }

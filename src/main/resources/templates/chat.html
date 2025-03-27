@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8">
   <title>채팅 클라이언트</title>
@@ -19,16 +19,24 @@
       padding: 8px;
       margin: 5px 0;
     }
+    .user-info {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
 
+<!-- 우측 상단 로그인 사용자 정보 표시 -->
+<div class="user-info">
+  로그인 사용자: <span id="loginUserId" th:text="${loginUserId}">user</span>
+</div>
+
 <h2>WebSocket 채팅</h2>
 
 <div>
-  <label>Sender ID:</label><br>
-  <input type="text" id="senderId" placeholder="user1"><br>
-
   <label>Receiver ID:</label><br>
   <input type="text" id="receiverId" placeholder="user2"><br>
 
@@ -51,24 +59,31 @@
 
 <script>
   let stompClient = null;
+  let loginUserId = null;
+
+  window.onload = function () {
+    // 로그인한 사용자 ID 읽어오기
+    loginUserId = document.getElementById("loginUserId").textContent.trim();
+  }
 
   function connect() {
     console.log("Connecting...");
+
     const socket = new SockJS(window.location.origin + '/ws');
     stompClient = Stomp.over(socket);
 
     stompClient.connect({}, function(frame) {
-      console.log('✅ Connected: ' + frame);
+      console.log('Connected: ' + frame);
 
-      const receiverId = document.getElementById("senderId").value;
-      stompClient.subscribe('/topic/private/' + receiverId, function(messageOutput) {
+      // 로그인 사용자의 ID를 통해 개인 채널 구독
+      stompClient.subscribe('/topic/private/' + loginUserId, function(messageOutput) {
         const msg = JSON.parse(messageOutput.body);
         const messagesDiv = document.getElementById("messages");
         messagesDiv.innerHTML += `<div><strong>${msg.senderId}:</strong> ${msg.content}</div>`;
       });
+
     }, function(error) {
-      console.error("❌ STOMP error:", error);
-      alert("웹소켓 연결 실패: 서버가 실행 중인지 확인하세요.");
+      console.error("STOMP error:", error);
     });
   }
 
@@ -78,13 +93,12 @@
       return;
     }
 
-    const senderId = document.getElementById("senderId").value;
     const receiverId = document.getElementById("receiverId").value;
     const roomId = document.getElementById("roomId").value;
     const content = document.getElementById("messageInput").value;
 
     const message = {
-      senderId: senderId,
+      senderId: loginUserId,
       receiverId: receiverId,
       content: content,
       roomId: roomId
