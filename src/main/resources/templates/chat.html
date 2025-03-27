@@ -54,21 +54,25 @@
 
   function connect() {
     console.log("Connecting...");
-    var socket = new SockJS(window.location.origin + '/ws'); // 경로 확인
+    const socket = new SockJS(window.location.origin + '/ws');
     stompClient = Stomp.over(socket);
 
     stompClient.connect({}, function(frame) {
-      console.log('Connected: ' + frame); // 이게 출력돼야 연결 성공
-      stompClient.subscribe('/topic/chatroom/1', function(messageOutput) {
-        console.log("Received:", messageOutput);
+      console.log('✅ Connected: ' + frame);
+
+      const receiverId = document.getElementById("senderId").value;
+      stompClient.subscribe('/topic/private/' + receiverId, function(messageOutput) {
+        const msg = JSON.parse(messageOutput.body);
+        const messagesDiv = document.getElementById("messages");
+        messagesDiv.innerHTML += `<div><strong>${msg.senderId}:</strong> ${msg.content}</div>`;
       });
     }, function(error) {
-      console.error("STOMP error:", error);
+      console.error("❌ STOMP error:", error);
+      alert("웹소켓 연결 실패: 서버가 실행 중인지 확인하세요.");
     });
   }
 
   function sendMessage() {
-
     if (!stompClient || !stompClient.connected) {
       alert("먼저 연결을 완료해주세요.");
       return;

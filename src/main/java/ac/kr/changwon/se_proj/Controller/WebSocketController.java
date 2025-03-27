@@ -45,7 +45,7 @@ public class WebSocketController {
         // 클라이언트로 전송될 데이터 구성
         message.setTimestamp(chat.getTimestamp());
 
-        messagingTemplate.convertAndSend("/topic/chatroom/" + chat.getRoomId(), message);
+        messagingTemplate.convertAndSend("/topic/private/" + message.getReceiverId(), message);
 
         return message;
 
