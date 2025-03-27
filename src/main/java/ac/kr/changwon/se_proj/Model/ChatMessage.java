@@ -2,12 +2,11 @@ package ac.kr.changwon.se_proj.Model;
 
 
 import jakarta.persistence.*;
-
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -22,7 +21,10 @@ public class ChatMessage {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private User sender;
+
+    @Column(nullable = false)
+    private String receiverId;
 
     private String content;
 
@@ -30,7 +32,14 @@ public class ChatMessage {
     private String username;
 
     @Temporal(TemporalType.TIMESTAMP)
-    private Date timestamp;
+    private LocalDateTime timestamp;
+
+    public ChatMessage(User sender, String receiverId, String content, LocalDateTime timestamp) {
+        this.sender = sender;
+        this.receiverId = receiverId;
+        this.content = content;
+        this.timestamp = timestamp;
+    }
 
 //    @Column(unique = true) 이 테이블은 파일 데이터를 업로드 하거나
 //    다운로드 시
