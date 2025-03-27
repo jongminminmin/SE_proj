@@ -43,4 +43,6 @@ public class MainController {
     public String registerPage(){
         return "register";
     }
+
+
 }
