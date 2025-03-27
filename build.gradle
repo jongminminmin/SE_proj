@@ -48,6 +48,11 @@ dependencies {
     implementation group: 'org.springframework.boot', name : 'spring-boot-starter-thymeleaf'
     implementation group: 'org.springframework.boot', name : 'spring-boot-starter-oauth2-client'
     implementation group : 'org.springframework.security', name : 'spring-security-oauth2-client'
+    // 웹소켓 및 메시징 브로커용 의존성
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+    // (선택) thymeleaf로 페이지 연결 시
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 }
 
 tasks.named('test') {
