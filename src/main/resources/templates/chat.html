@@ -53,18 +53,17 @@
   let stompClient = null;
 
   function connect() {
-    const socket = new SockJS('/ws');
+    console.log("Connecting...");
+    var socket = new SockJS('/ws'); // 경로 확인
     stompClient = Stomp.over(socket);
 
-    stompClient.connect({}, () => {
-      const roomId = document.getElementById("roomId").value;
-      stompClient.subscribe("/topic/chatroom/" + roomId, (message) => {
-        const msg = JSON.parse(message.body);
-        const messageBox = document.getElementById("messages");
-        const formatted = `<div><b>${msg.senderId}</b> → <b>${msg.receiverId}</b>: ${msg.content}</div>`;
-        messageBox.innerHTML += formatted;
-        messageBox.scrollTop = messageBox.scrollHeight;
+    stompClient.connect({}, function(frame) {
+      console.log('Connected: ' + frame); // 이게 출력돼야 연결 성공
+      stompClient.subscribe('/topic/chatroom/1', function(messageOutput) {
+        console.log("Received:", messageOutput);
       });
+    }, function(error) {
+      console.error("STOMP error:", error);
     });
   }
 
