@@ -9,4 +9,5 @@ public interface ChatMessageService {
     ChatMessage findById(Integer id);
     ChatMessage save(ChatMessage obj);
     void deleteById(Integer id);
+    void process(ChatMessage chatMessage);
 }
