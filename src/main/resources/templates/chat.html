@@ -54,7 +54,7 @@
 
   function connect() {
     console.log("Connecting...");
-    var socket = new SockJS('/ws'); // 경로 확인
+    var socket = new SockJS(window.location.origin + '/ws'); // 경로 확인
     stompClient = Stomp.over(socket);
 
     stompClient.connect({}, function(frame) {
@@ -68,6 +68,12 @@
   }
 
   function sendMessage() {
+
+    if (!stompClient || !stompClient.connected) {
+      alert("먼저 연결을 완료해주세요.");
+      return;
+    }
+
     const senderId = document.getElementById("senderId").value;
     const receiverId = document.getElementById("receiverId").value;
     const roomId = document.getElementById("roomId").value;
