@@ -1,112 +1,131 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>채팅 클라이언트</title>
+  <title>채팅</title>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
   <style>
     body {
-      font-family: sans-serif;
+      font-family: Arial, sans-serif;
       margin: 20px;
     }
-    #messages {
-      border: 1px solid #ccc;
-      height: 300px;
+    #chatArea {
+      height: 400px;
       overflow-y: scroll;
+      border: 1px solid gray;
       padding: 10px;
       margin-bottom: 10px;
     }
-    input, button {
-      padding: 8px;
-      margin: 5px 0;
+    #receiverList {
+      overflow-x: auto;
+      white-space: nowrap;
+      border-top: 1px solid #ccc;
+      padding-top: 5px;
+      margin-top: 10px;
     }
-    .user-info {
-      position: absolute;
-      top: 10px;
-      right: 20px;
-      font-weight: bold;
+    #receiverList button {
+      margin-right: 10px;
+      padding: 5px 10px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
 
-<!-- 우측 상단 로그인 사용자 정보 표시 -->
-<div class="user-info">
-  로그인 사용자: <span id="loginUserId" th:text="${loginUserId}">user</span>
-</div>
+<h2>채팅</h2>
 
-<h2>WebSocket 채팅</h2>
+<!-- 채팅 메시지 출력 영역 -->
+<div id="chatArea"></div>
 
+<!-- 메시지 입력 영역 -->
+<input type="text" id="messageInput" placeholder="메시지 입력" style="width: 70%;">
+<button id="sendBtn">전송</button>
+
+<!-- 수신자 선택 영역 -->
 <div>
-  <label>Receiver ID:</label><br>
-  <input type="text" id="receiverId" placeholder="user2"><br>
-
-  <label>Room ID:</label><br>
-  <input type="text" id="roomId" placeholder="예: 123"><br>
-
-  <label>Message:</label><br>
-  <input type="text" id="messageInput" placeholder="메시지 입력..."><br>
-
-  <button onclick="connect()">Connect</button>
-  <button onclick="sendMessage()">Send</button>
+  <strong>받는 사람 선택:</strong>
+  <div id="receiverList"></div>
 </div>
-
-<hr>
-
-<div id="messages"></div>
-
-<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
 
 <script>
   let stompClient = null;
-  let loginUserId = null;
-
-  window.onload = function () {
-    // 로그인한 사용자 ID 읽어오기
-    loginUserId = document.getElementById("loginUserId").textContent.trim();
-  }
+  let selectedReceiverId = null;
+  let currentUserId = null;
 
   function connect() {
-    console.log("Connecting...");
-
-    const socket = new SockJS(window.location.origin + '/ws');
+    const socket = new SockJS('/ws');
     stompClient = Stomp.over(socket);
 
-    stompClient.connect({}, function(frame) {
+    stompClient.connect({}, function (frame) {
       console.log('Connected: ' + frame);
 
-      // 로그인 사용자의 ID를 통해 개인 채널 구독
-      stompClient.subscribe('/topic/private/' + loginUserId, function(messageOutput) {
-        const msg = JSON.parse(messageOutput.body);
-        const messagesDiv = document.getElementById("messages");
-        messagesDiv.innerHTML += `<div><strong>${msg.senderId}:</strong> ${msg.content}</div>`;
-      });
+      // 현재 로그인된 사용자 정보 가져오기
+      fetch('/api/user/me')
+              .then(res => res.json())
+              .then(user => {
+                currentUserId = user.id;
 
-    }, function(error) {
-      console.error("STOMP error:", error);
+                // 수신자별 구독
+                stompClient.subscribe('/topic/private/' + currentUserId, function (messageOutput) {
+                  const message = JSON.parse(messageOutput.body);
+                  showMessage(message.username + ': ' + message.content);
+                });
+
+                loadReceiverList(); // 사용자 목록 불러오기
+              });
     });
   }
 
-  function sendMessage() {
-    if (!stompClient || !stompClient.connected) {
-      alert("먼저 연결을 완료해주세요.");
+  // 수신자 목록 표시
+  function loadReceiverList() {
+    fetch('/api/user/list')
+            .then(res => res.json())
+            .then(users => {
+              const receiverList = document.getElementById("receiverList");
+              receiverList.innerHTML = "";
+
+              users.forEach(user => {
+                if (user.id !== currentUserId) {
+                  const btn = document.createElement("button");
+                  btn.textContent = user.username;
+                  btn.onclick = function () {
+                    selectedReceiverId = user.id;
+                    alert(user.username + "님에게 메시지를 보냅니다.");
+                  };
+                  receiverList.appendChild(btn);
+                }
+              });
+            });
+  }
+
+  // 메시지 전송
+  document.getElementById('sendBtn').addEventListener('click', function () {
+    const content = document.getElementById('messageInput').value;
+    if (!selectedReceiverId) {
+      alert("수신자를 먼저 선택하세요.");
       return;
     }
 
-    const receiverId = document.getElementById("receiverId").value;
-    const roomId = document.getElementById("roomId").value;
-    const content = document.getElementById("messageInput").value;
+    stompClient.send("/app/chat.sendMessage", {}, JSON.stringify({
+      receiverId: selectedReceiverId,
+      roomId: 1,
+      content: content
+    }));
 
-    const message = {
-      senderId: loginUserId,
-      receiverId: receiverId,
-      content: content,
-      roomId: roomId
-    };
+    document.getElementById('messageInput').value = '';
+  });
 
-    stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(message));
-    document.getElementById("messageInput").value = "";
+  // 채팅 메시지 출력
+  function showMessage(message) {
+    const chatArea = document.getElementById("chatArea");
+    const msg = document.createElement("div");
+    msg.textContent = message;
+    chatArea.appendChild(msg);
+    chatArea.scrollTop = chatArea.scrollHeight;
   }
+
+  connect();
 </script>
 
 </body>

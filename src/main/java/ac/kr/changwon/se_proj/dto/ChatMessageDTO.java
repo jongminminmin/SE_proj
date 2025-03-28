@@ -10,6 +10,7 @@ public class ChatMessageDTO {
     private int roomId;
     private String content;
     private String receiverId;
+    private String username;
     private String message;
     private LocalDateTime timestamp;
 }
