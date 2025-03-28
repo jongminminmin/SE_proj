@@ -12,12 +12,9 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
 
 import java.security.Principal;
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 @Controller
 @RequiredArgsConstructor
