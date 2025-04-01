@@ -1,9 +1,7 @@
 package ac.kr.changwon.se_proj.Config;
 
 import ac.kr.changwon.se_proj.Service.Interface.CustomOAuth2UserService;
-import ac.kr.changwon.se_proj.Service.impl.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -34,7 +32,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/login", "/register", "/oauth2/**", "/api/auth/**","/api/chat/**","/chat/**","/ws","/ws/**").permitAll()
+                        .requestMatchers("/", "/login", "/register", "/oauth2/**", "/api/**", "/api/auth/**","/api/chat/**","/chat/**","/ws","/ws/**").permitAll()
                         .requestMatchers("/resources/**", "/static/**", "/css/**", "/js/**").permitAll()
                         .anyRequest().authenticated()
                 )
@@ -46,7 +44,6 @@ public class SecurityConfig {
                 )
                 .logout(LogoutConfigurer::permitAll)
                 .oauth2Login(oauth2 -> oauth2
-                        .loginPage("/login")
                         .defaultSuccessUrl("/oauth2/success", true)
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
@@ -56,9 +53,9 @@ public class SecurityConfig {
         return http.build();
     }
 
+
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
     }
-
 }
