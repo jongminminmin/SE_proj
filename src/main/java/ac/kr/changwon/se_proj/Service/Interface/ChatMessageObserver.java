@@ -1,4 +1,4 @@
-package ac.kr.changwon.se_proj.Service;
+package ac.kr.changwon.se_proj.Service.Interface;
 
 import ac.kr.changwon.se_proj.Model.ChatMessage;
 
