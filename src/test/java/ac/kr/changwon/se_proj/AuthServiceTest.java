@@ -1,8 +1,8 @@
 package ac.kr.changwon.se_proj;
 
-import ac.kr.changwon.se_proj.Model.User;
-import ac.kr.changwon.se_proj.Repository.UserRepository;
-import ac.kr.changwon.se_proj.Service.impl.AuthServiceImpl;
+import ac.kr.changwon.se_proj.model.User;
+import ac.kr.changwon.se_proj.repository.UserRepository;
+import ac.kr.changwon.se_proj.service.impl.AuthServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;

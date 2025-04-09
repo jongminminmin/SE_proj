@@ -1,6 +1,0 @@
-package ac.kr.changwon.se_proj.Service.Interface;
-
-public interface AuthService {
-    boolean login(String userId, String password);
-    boolean register(String userId, String username, String password, String email);
-}
