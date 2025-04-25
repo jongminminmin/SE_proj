@@ -1,5 +1,4 @@
-package ac.kr.changwon.se_proj.controller;
-
+package ac.kr.changwon.se_proj.controller.login;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;

@@ -2,7 +2,7 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Login Page</title>
     <style>
         body {
@@ -13,36 +13,52 @@
             min-height: 100vh;
             background-color: #f0f0f0;
         }
-
         .container {
             background-color: #fff;
             padding: 30px;
             border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            width: 300px;
         }
-
         h2 {
             text-align: center;
             margin-bottom: 20px;
         }
-
+        label {
+            display: block;
+            margin-top: 10px;
+        }
         input[type="text"],
         input[type="password"] {
             width: 100%;
-            padding: 10px;
-            margin: 10px 0;
+            padding: 8px;
+            margin-top: 5px;
+            box-sizing: border-box;
             border: 1px solid #ccc;
             border-radius: 3px;
-            box-sizing: border-box;
         }
-
-        button {
+        .btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 20px;
             background-color: #4CAF50;
             color: white;
-            padding: 12px 20px;
             border: none;
             border-radius: 3px;
             cursor: pointer;
+        }
+        .error {
+            color: #c00;
+            margin-top: 10px;
+            text-align: center;
+        }
+        .signup {
+            text-align: center;
+            margin-top: 15px;
+        }
+        .signup a {
+            color: #4CAF50;
+            text-decoration: none;
         }
     </style>
 </head>
@@ -50,61 +66,30 @@
 <div class="container">
     <h2>Login</h2>
 
-    <!-- Error message will be shown here -->
-    <div th:if="${param.error}" style="color: red;">
-        Invalid ID or Password
+    <!-- 에러 파라미터가 있으면 표시 -->
+    <div th:if="${param.error}" class="error">
+        Invalid username or password.
+    </div>
+    <div th:if="${param.logout}" class="error">
+        You have been logged out.
     </div>
 
-    <form id="loginForm">
-        <label for="id">ID:</label>
-        <input type="text" id="id" name="id" required>
+    <form th:action="@{/login}" method="post">
+        <!-- CSRF 토큰 (csrf 비활성화했다면 생략 가능) -->
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
 
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required>
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required autofocus />
 
-        <button type="submit">Login</button>
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required />
+
+        <button type="submit" class="btn">Log in</button>
     </form>
 
-    <h3>Don't have Account?</h3>
-    <a href="/register">signup</a>
+    <div class="signup">
+        <p>Don't have an account? <a th:href="@{/register}">Sign up</a></p>
+    </div>
 </div>
-
-<script>
-    const form = document.getElementById('loginForm');
-
-    form.addEventListener('submit', function(event) {
-        event.preventDefault(); // Prevent default form submission
-
-        const id = document.getElementById('id').value;
-        const password = document.getElementById('password').value;
-
-        const data = { id: id, password: password };
-
-        fetch('/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
-        })
-            .then(response => {
-                if (response.ok) {
-                    return response.text(); // get token
-                }
-                else {
-                    window.location.href = '/login?error=true'; // show error message
-                    throw new Error('Login failed');
-                }
-            })
-            .then(token => {
-                // If you want to use the token, you can save it in a cookie or local storage
-                console.log('Token:', token);
-                window.location.href = '/'; // redirect to root path
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
-    });
-</script>
 </body>
 </html>

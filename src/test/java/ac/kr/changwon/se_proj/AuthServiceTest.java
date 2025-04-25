@@ -5,8 +5,10 @@ import ac.kr.changwon.se_proj.repository.UserRepository;
 import ac.kr.changwon.se_proj.service.impl.AuthServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Optional;
 
@@ -15,6 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+@SpringBootTest
+@ActiveProfiles("test")
 public class AuthServiceTest {
     private AuthServiceImpl authService;
     private UserRepository userRepository;

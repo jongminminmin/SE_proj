@@ -14,6 +14,28 @@ java {
     }
 }
 
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java']
+        }
+        resources {
+            srcDirs = ['src/main/resources']
+        }
+    }
+    test {
+        java {
+            srcDirs = ['src/test/java']
+            // 테스트에서 메인 소스 참조
+            compileClasspath += sourceSets.main.output
+            runtimeClasspath += sourceSets.main.output
+        }
+        resources {
+            srcDirs = ['src/test/resources']
+        }
+    }
+}
+
 configurations {
     compileOnly {
         extendsFrom annotationProcessor
@@ -34,6 +56,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web-services'
     implementation 'io.github.wimdeblauwe:htmx-spring-boot:4.0.1'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    implementation 'org.springframework.session:spring-session-jdbc'
+    testImplementation 'io.projectreactor:reactor-test'
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
@@ -53,11 +78,22 @@ dependencies {
 
     // (선택) thymeleaf로 페이지 연결 시
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+
+    testImplementation 'org.mockito:mockito-core:5.10.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.10.0'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+
+
+    testRuntimeOnly 'com.h2database:h2'
+
+
 }
 
 tasks.named('test') {
     outputs.dir snippetsDir
     useJUnitPlatform()
+    systemProperty 'spring.profiles.active', 'test'
 }
 
 tasks.named('asciidoctor') {

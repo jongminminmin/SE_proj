@@ -1,4 +1,4 @@
-package ac.kr.changwon.se_proj.controller;
+package ac.kr.changwon.se_proj.controller.webSocket;
 
 
 import ac.kr.changwon.se_proj.service.impl.WebSocketSessionTracker;

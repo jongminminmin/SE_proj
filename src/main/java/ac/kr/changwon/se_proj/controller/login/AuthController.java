@@ -1,4 +1,4 @@
-package ac.kr.changwon.se_proj.controller;
+package ac.kr.changwon.se_proj.controller.login;
 
 import ac.kr.changwon.se_proj.service.Interface.AuthService;
 import ac.kr.changwon.se_proj.dto.UserDto;
