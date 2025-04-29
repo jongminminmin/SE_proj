@@ -1,1 +1,3 @@
 rootProject.name = 'SE_proj'
+
+include 'src:test:resources'

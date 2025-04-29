@@ -29,9 +29,10 @@ public class WebSocketController {
      */
     @MessageMapping("/chat.sendMessage")
     public ChatMessageDTO sendMessage(@Payload ChatMessageDTO message, Principal principal) {
-        User sender = userRepository.findByUsername(principal.getName())
-                .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다. "+principal.getName()));
-
+        // principal이 null인 테스트 환경을 대비해, DTO에 담긴 username을 fallback으로 사용
+        String username = (principal != null) ? principal.getName() : message.getUsername();
+        User sender = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + username));
 
         ChatMessage chat = new ChatMessage();
         chat.setSender(sender);
@@ -43,7 +44,7 @@ public class WebSocketController {
 
         chatMessageRepository.save(chat);
 
-        message.setSenderId(sender.getId());  // senderId를 DTO에 추가
+        message.setSenderId(sender.getId());
         message.setUsername(sender.getUsername());
         message.setTimestamp(chat.getTimestamp());
 

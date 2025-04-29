@@ -2,6 +2,7 @@ package ac.kr.changwon.se_proj.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.UuidGenerator;
 
 @Entity
 @Table(name = "user")
@@ -14,7 +15,11 @@ import lombok.Data;
 public class User{
 
     @Id
-    @Column(nullable = false)
+    @GeneratedValue(generator = "uuid2")
+    @UuidGenerator
+    @Column(columnDefinition = "varchar(25)"
+    , updatable = false,
+    nullable = false)
     private String id;
 
     @Column(nullable = false)
@@ -26,17 +31,6 @@ public class User{
     private String email;
 
     private String role;
-
-    public User(String userId, String username, String password, String email) {
-        this.username = username;
-        this.password = password;
-        this.email = email;
-        this.id = userId;
-    }
-
-    public User() {
-
-    }
 
     /*비밀번호 검증 메서드*/
 
