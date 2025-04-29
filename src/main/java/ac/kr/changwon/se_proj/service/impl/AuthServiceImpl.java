@@ -51,7 +51,8 @@ public class AuthServiceImpl implements AuthService {
         if (userId.equalsIgnoreCase("admin") || userId.equalsIgnoreCase("root") ||
                 username.equalsIgnoreCase("admin") || username.equalsIgnoreCase("root")) {
             role = "ADMIN";
-        } else {
+        }
+        else {
             role = "USER";
         }
 

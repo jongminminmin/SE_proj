@@ -32,6 +32,18 @@ public class User{
 
     private String role;
 
+    public User(String id, String username, String password, String email) {
+        this.id = id;
+        this.username = username;
+        this.password = password;
+        this.email = email;
+    }
+
+    public User() {
+
+    }
+
+
     /*비밀번호 검증 메서드*/
 
     /*public boolean checkPassword(String password) {

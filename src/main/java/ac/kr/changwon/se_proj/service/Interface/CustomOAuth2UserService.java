@@ -45,7 +45,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService implements
         }
 
         if (userId != null && !userRepository.existsById(userId)) {
-            User newUser = new User(userId, username, "SOCIAL_USER", email);
+            User newUser = new User();
+            newUser.setId(userId);
+            newUser.setUsername(username);
+            newUser.setRole("SOCIAL_USER");
+            newUser.setEmail(email);
             userRepository.save(newUser);
         }
 

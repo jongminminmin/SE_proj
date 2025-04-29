@@ -76,7 +76,7 @@ dependencies {
     // 웹소켓 및 메시징 브로커용 의존성
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
-    // thymeleaf로 페이지 연결 시
+    // (선택) thymeleaf로 페이지 연결 시
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 
     testImplementation 'org.mockito:mockito-core:5.10.0'
