@@ -10,14 +10,6 @@ plugins {
 group = 'ac.kr.changwon'
 version = '0.0.1-SNAPSHOT'
 
-def os = OperatingSystem.current()
-
-def javaHome=os.windows
-        ? project.findProperty('javaHome.windows') : project.findProperty('javaHome.linux')
-tasks.withType(JavaCompile).configureEach {
-    options.fork = true
-    options.forkOptions.javaHome = file(javaHome)
-}
 
 java {
     toolchain {
