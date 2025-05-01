@@ -31,7 +31,7 @@ public class WebSocketController {
     public ChatMessageDTO sendMessage(@Payload ChatMessageDTO message, Principal principal) {
         // principal이 null인 테스트 환경을 대비해, DTO에 담긴 username을 fallback으로 사용
         String username = (principal != null) ? principal.getName() : message.getUsername();
-        User sender = userRepository.findByLoginId(username)
+        User sender = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + username));
 
         ChatMessage chat = new ChatMessage();

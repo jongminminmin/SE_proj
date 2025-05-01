@@ -6,14 +6,11 @@ import ac.kr.changwon.se_proj.repository.UserRepository;
 import ac.kr.changwon.se_proj.service.Interface.AuthService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.util.Optional;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -33,7 +30,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public boolean login(String userId, String password) {
-        User user = userRepository.findByLoginId(userId)
+        User user = userRepository.findByUsername(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("회원 없음"));
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new BadCredentialsException("비밀번호 불일치");
