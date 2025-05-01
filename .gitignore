@@ -7,6 +7,10 @@ build/
 
 docker-compose.yml
 Dockerfile
+gradlew.bat
+myapp.cer
+start-container.bat
+
 
 ### STS ###
 .apt_generated
@@ -38,4 +42,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
 /src/main/resources/application.properties
+/src/main/resources/keystore.p12
