@@ -4,8 +4,11 @@ import ac.kr.changwon.se_proj.service.Interface.AuthService;
 import ac.kr.changwon.se_proj.dto.UserDto;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -35,28 +38,32 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public String register(
-            @ModelAttribute("userDto") @Valid UserDto dto,
-            BindingResult br,
-            Model model
-    ) {
-        // 1) 입력 검증 에러 체크
-        if (br.hasErrors()) {
-            return "register";
-        }
-
-        // 2) 서비스 호출 (중복 체크 + insert or skip)
+    public ResponseEntity<String> register(@RequestBody
+                                               UserDto
+                                                       dto) {
         boolean ok = authService.register(
-                dto.getId(), dto.getUsername(), dto.getPassword(), dto.getEmail()
+                dto.getId(),
+                dto.getUsername(),
+                dto.getPassword(),
+                dto.getEmail()
         );
 
-        // 3) 이미 DB에 존재해서 등록 안 된 경우
-        if (!ok) {
-            model.addAttribute("errorMessage", "이미 존재하는 아이디입니다.");
-            return "register";
+        if(!ok){
+            //http 400 + 메시지 바디
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).
+                    body("이미 존재하는 아이디입니다.");
         }
 
-        // 4) 성공하면 로그인 페이지로 리다이렉트
-        return "redirect:/login";
+        return ResponseEntity.ok("가입성공");
+    }
+
+
+    @ExceptionHandler
+    public ResponseEntity<Map<String,String>> handleValidationException(MethodArgumentNotValidException ex){
+        Map<String,String> error = new HashMap<>();
+        ex.getBindingResult().getFieldErrors()
+                .forEach(e -> error.put(e.getField(), e.getDefaultMessage()));
+        return ResponseEntity.badRequest().body(error);
+
     }
 }

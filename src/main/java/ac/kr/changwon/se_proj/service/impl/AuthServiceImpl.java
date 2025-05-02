@@ -6,6 +6,7 @@ import ac.kr.changwon.se_proj.repository.UserRepository;
 import ac.kr.changwon.se_proj.service.Interface.AuthService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -17,11 +18,10 @@ public class AuthServiceImpl implements AuthService {
     @PersistenceContext
     private EntityManager em;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
+    private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
 
+    @Autowired
     public AuthServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -30,29 +30,35 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public boolean login(String userId, String password) {
-        User user = userRepository.findByUsername(userId)
-                .orElseThrow(() -> new UsernameNotFoundException("회원 없음"));
-        if (!passwordEncoder.matches(password, user.getPassword())) {
+        User user = userRepository.findById(userId).
+                orElseThrow(() ->
+                        new UsernameNotFoundException("존재하지 않는 사용자" + userId)
+                );
+
+        //패스워드 인코더 매치
+        if(!passwordEncoder.
+                matches(password, user.getPassword())) {
             throw new BadCredentialsException("비밀번호 불일치");
         }
-        // 로그인 성공 로직
         return true;
     }
 
+
+    @Transactional
     @Override
     public boolean register(String userId, String username, String rawPassword, String email) {
-        // 1) 입력검증, 2) 중복검사
-        if (userRepository.existsById(userId) || userRepository.findByEmail(email)) {
+        if(userRepository.existsById(userId)
+                || userRepository.existsByEmail(email)){
             return false;
         }
-        String role = (userId.equalsIgnoreCase("admin") || userId.equalsIgnoreCase("root"))
+        String role = (userId.equalsIgnoreCase("admin")
+                || userId.equalsIgnoreCase("root"))
                 ? "ROLE_ADMIN" : "ROLE_USER";
-        String pw = passwordEncoder.encode(rawPassword);
 
-        User u = new User(userId, username, pw, email, role);
-        em.persist(u);  // 무조건 INSERT
+        String encodedPassword = passwordEncoder.encode(rawPassword);
+
+        User u = new User(userId, username, encodedPassword, role);
+        userRepository.save(u);
         return true;
     }
-
-
 }

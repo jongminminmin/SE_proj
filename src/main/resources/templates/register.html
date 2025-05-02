@@ -76,52 +76,50 @@
         <button>카카오로 로그인</button>
     </a>
 </div>
-
 <script>
+    // 1) 폼 엘리먼트를 가져와서
     const form = document.getElementById('registerForm');
 
-    form.addEventListener('submit', function(event) {
-        event.preventDefault(); // Prevent default form submission
+    // 2) submit 이벤트를 가로챕니다
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
 
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-        const id = document.getElementById('id').value;
-        const email = document.getElementById('email').value;
+        const id       = form.id.value.trim();
+        const username = form.username.value.trim();
+        const password = form.password.value;
+        const email    = form.email.value.trim();
 
-        // ✅ 이메일 비어있을 경우 경고 및 확인 창
-        if (!email.trim()) {
-            const proceed = confirm("이메일 입력란이 비어있습니다.\n비어있는 이메일로 회원가입 하시겠습니까?");
-            if (!proceed) {
-                return; // 제출 취소
+        // 이메일 비었을 때 확인
+        if (!email) {
+            if (!confirm("이메일 입력란이 비어있습니다.\n비어있는 이메일로 회원가입 하시겠습니까?")) {
+                return;
             }
         }
 
-        const data = { username: username, password: password, id: id, email: email };
+        const data = { id, username, password, email };
 
-        fetch('api/auth/register', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
-        })
-            .then(response => {
-                if (response.ok) {
-                    return response.text();
-                }
-                else {
-                    throw new Error('Register failed');
-                }
-            })
-            .then(result => {
-                console.log('Result:', result);
-                window.location.href = '/login'; //redirect to login page
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Register failed');
+        try {
+            // 3) 앞에 슬래시를 붙여 절대경로로 요청
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
             });
+
+            if (!res.ok) {
+                // 400, 500 등 상태 코드 처리
+                const msg = await res.text();
+                throw new Error(msg || 'Register failed');
+            }
+
+            // 성공 시 로그인 페이지로 이동
+            window.location.href = '/login';
+        } catch (err) {
+            console.error(err);
+            alert('회원가입 실패: ' + err.message);
+        }
     });
 </script>
+
 </body>
 </html>

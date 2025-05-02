@@ -16,9 +16,7 @@ import org.springframework.data.domain.Persistable;
 public class User implements Persistable<String> {
 
     @Id
-    @GeneratedValue(generator = "uuid2")
-    @UuidGenerator
-    @Column(columnDefinition = "varchar(25)"
+    @Column(length = 25
     , updatable = false,
     nullable = false)
     private String id;
@@ -57,8 +55,9 @@ public class User implements Persistable<String> {
 
 
     @Override
+    @Transient
     public boolean isNew() {
-        return false;
+        return this.isNew;
     }
 
     @Override
