@@ -2,7 +2,6 @@ package ac.kr.changwon.se_proj.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import org.hibernate.annotations.UuidGenerator;
 import org.springframework.data.domain.Persistable;
 
 @Entity
@@ -14,6 +13,9 @@ import org.springframework.data.domain.Persistable;
 * password : for login Authenticate
 * email : just e-mail*/
 public class User implements Persistable<String> {
+
+    private static final long serialVersionUID = 1L;
+
 
     @Id
     @Column(length = 25
