@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 import org.springframework.data.domain.Persistable;
 
+import java.io.Serializable;
+
 @Entity
 @Table(name = "user")
 @Data
@@ -12,7 +14,7 @@ import org.springframework.data.domain.Persistable;
 * id : user id for login
 * password : for login Authenticate
 * email : just e-mail*/
-public class User implements Persistable<String> {
+public class User implements Persistable<String>, Serializable {
 
     private static final long serialVersionUID = 1L;
 
