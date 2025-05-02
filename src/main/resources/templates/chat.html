@@ -61,7 +61,7 @@
       console.log('Connected: ' + frame);
 
       // 현재 로그인된 사용자 정보 가져오기
-      fetch('/api/user/me')
+      fetch('/api/users/me')
               .then(res => res.json())
               .then(user => {
                 currentUserId = user.id;
@@ -79,7 +79,7 @@
 
   // 수신자 목록 표시
   function loadReceiverList() {
-    fetch('/api/user/list')
+    fetch('/api/users/list')
             .then(res => res.json())
             .then(users => {
               const receiverList = document.getElementById("receiverList");
