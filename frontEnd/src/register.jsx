@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 
 export default function Register() {
   // State variables
-  const [email, setEmail] = useState('');
+  const [id, setId] = useState('');
   const [pw, setPw] = useState('');
   const [emailValid, setEmailValid] = useState(false);
   const [pwValid, setPwValid] = useState(false);
@@ -11,16 +11,54 @@ export default function Register() {
   
   const navigate = useNavigate();
 
+
+  const handleSubmit = async(e) => {
+    e.preventDefault();
+    try{
+      const res = await fetch('/auth/register', {
+        method : 'POST',
+        headers : {' Content-Type ' : 'application/json'},
+        body : JSON.stringify({ id, pw})
+      });
+      if(!res.ok) throw new Error('회원가입 실패')
+    }
+    //에러 캐치
+    catch (err) {
+      console.error(err);
+    }
+  }
+
   // Email validation handler
   const handleEmail = (e) => {
     setEmail(e.target.value);
     const regex = /^(([^<>()[\].,;:\s@"]+(\.[^<>()[\].,;:\s@"]+)*)|(".+"))@(([^<>()[\].,;:\s@"]+\.)+[^<>()[\].,;:\s@"]{2,})$/i;
     if (regex.test(e.target.value)) {
       setEmailValid(true);
-    } else {
+    }
+    else {
       setEmailValid(false);
     }
-  }
+  };
+
+  return (
+      <form onSubmit={handleSubmit}>
+        <input type="id"
+        value={id}
+        onChange={e => setId(e.target.value)}
+        placeholder="아이디"
+        required
+        />
+
+        <input
+          type="password"
+        value={pw}
+        onChange={e => setPw(e.target.value)}
+        placeholder="비밀번호"
+          required
+        />
+        <button type="submit">회원가입</button>
+      </form>
+  )
 
   // Password validation handler
   const handlePw = (e) => {
@@ -28,18 +66,13 @@ export default function Register() {
     const regex = /^(?=.*[a-zA-z])(?=.*[0-9])(?=.*[$`~!@$!%*#^?&\\(\\)\-_=+])(?!.*[^a-zA-z0-9$`~!@$!%*#^?&\\(\\)\-_=+]).{8,20}$/;
     if (regex.test(e.target.value)) {
       setPwValid(true);
-    } else {
+    }
+    else {
       setPwValid(false);
     }
   }
 
-  // Registration button click handler
-  const onClickConfirmButton = () => {
-    alert('회원가입이 완료되었습니다.');
-    navigate('/');
-  }
-
-  // Effect to enable/disable registration button based on validation
+   // Effect to enable/disable registration button based on validation
   useEffect(() => {
     if (emailValid && pwValid) {
       setNotAllow(false);
@@ -89,7 +122,7 @@ export default function Register() {
       </div>
       <div className="buttonWrap">
         <button 
-          onClick={onClickConfirmButton} 
+          onClick={onClickConfirmButton}
           disabled={notAllow} 
           className="bottomButton"
         >
