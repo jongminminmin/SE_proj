@@ -5,6 +5,7 @@ import ac.kr.changwon.se_proj.repository.TaskRepository;
 import ac.kr.changwon.se_proj.service.Interface.TaskService;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -31,8 +32,27 @@ public class TaskServiceImpl implements TaskService {
         return taskRepository.save(task);
     }
 
+    public Task updateTask(Integer id, Task updated) {
+        Task task = taskRepository.findById(id).orElseThrow(() -> new RuntimeException("업무를 찾을 수 없습니다."));
+
+        task.setProject_id(updated.getProject_id());
+        task.setTaskTitle(updated.getTaskTitle());
+        task.setDescription(updated.getDescription());
+        task.setDueStart(updated.getDueStart());
+        task.setDueEnd(updated.getDueEnd());
+        task.setTask_content(updated.getTask_content());
+        task.setAssignee(updated.getAssignee());
+
+        return taskRepository.save(task);
+    }
+
     @Override
     public void deleteById(Integer id) {
         taskRepository.deleteById(id);
     }
+
+    public List<Task> getTasksDueTomorrow() {
+        return taskRepository.findByDueEnd(LocalDate.now().plusDays(1));
+    }
+
 }

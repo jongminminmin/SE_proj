@@ -41,4 +41,10 @@ public class TaskController {
     public void delete(@RequestBody Integer id) {
         taskService.deleteById(id);
     }
+
+    @GetMapping("/due-tomorrow")
+    public List<Task> getTasksDueTomorrow() {
+        return taskService.getTasksDueTomorrow();
+    }
+
 }

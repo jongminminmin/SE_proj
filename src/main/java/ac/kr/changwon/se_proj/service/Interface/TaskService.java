@@ -9,4 +9,6 @@ public interface TaskService {
     Task findById(Integer id);
     Task save(Task task);
     void deleteById(Integer id);
+
+    List<Task> getTasksDueTomorrow();
 }
