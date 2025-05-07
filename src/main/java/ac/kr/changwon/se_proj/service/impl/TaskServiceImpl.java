@@ -35,12 +35,12 @@ public class TaskServiceImpl implements TaskService {
     public Task updateTask(Integer id, Task updated) {
         Task task = taskRepository.findById(id).orElseThrow(() -> new RuntimeException("업무를 찾을 수 없습니다."));
 
-        task.setProject_id(updated.getProject_id());
+        task.setProjectId(updated.getProjectId());
         task.setTaskTitle(updated.getTaskTitle());
         task.setDescription(updated.getDescription());
         task.setDueStart(updated.getDueStart());
         task.setDueEnd(updated.getDueEnd());
-        task.setTask_content(updated.getTask_content());
+        task.setTaskContent(updated.getTaskContent());
         task.setAssignee(updated.getAssignee());
 
         return taskRepository.save(task);

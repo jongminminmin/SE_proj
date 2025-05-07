@@ -22,9 +22,8 @@ public class Task {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int taskNo;
 
-    @ManyToOne
     @JoinColumn(name = "project_id")
-    private Project project_id; // FK to Project.project_id
+    private Integer projectId; // FK to Project.project_id
 
     @ManyToOne
     @JoinColumn(name = "assignee_id")
@@ -43,7 +42,7 @@ public class Task {
 
     @Lob
     @Column(name = "task_content", columnDefinition = "LONGTEXT")
-    private String task_content;
+    private String taskContent;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
