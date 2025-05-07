@@ -28,8 +28,8 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public Map<String, Object> login(@RequestParam String userId,
-                                     @RequestParam String password) {
+    public Map<String, Object> login(@RequestBody String userId,
+                                     @RequestBody String password) {
         boolean result = authService.login(userId, password);
         Map<String, Object> response = new HashMap<>();
         response.put("success", result);
