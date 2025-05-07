@@ -36,7 +36,7 @@ function Signup() {
 
     try {
       // API 요청
-      const response = await fetch('/register', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

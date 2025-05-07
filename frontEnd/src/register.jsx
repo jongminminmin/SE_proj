@@ -15,9 +15,9 @@ export default function Register() {
   const handleSubmit = async(e) => {
     e.preventDefault();
     try{
-      const res = await fetch('/auth/register', {
+      const res = await fetch('/auth/api/register', {
         method : 'POST',
-        headers : {' Content-Type ' : 'application/json'},
+        headers : {'Content-Type ' : 'application/json'},
         body : JSON.stringify({ id, pw})
       });
       if(!res.ok) throw new Error('회원가입 실패')
