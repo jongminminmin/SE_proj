@@ -34,13 +34,13 @@ public class SecurityConfig {
                 .requiresChannel(channel -> channel
                         .anyRequest().requiresSecure())  // 모든 요청에 HTTPS 필수
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/login", "/register", "/oauth2/**", "/api/**", "/api/auth/**","/api/chat/**","/chat/**","/ws","/ws/**").permitAll()
+                        .requestMatchers("/","/main", "/login", "/register", "/oauth2/**", "/api/**", "/api/auth/**","/api/chat/**","/chat/**","/ws","/ws/**").permitAll()
                         .requestMatchers("/resources/**", "/static/**", "/css/**", "/js/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
                         .loginPage("/login")
-                        .defaultSuccessUrl("/", false)
+                        .defaultSuccessUrl("/main", false)
                         .failureUrl("/login?error=true")
                         .permitAll()
                 )

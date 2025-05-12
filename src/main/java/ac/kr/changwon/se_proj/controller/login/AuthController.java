@@ -1,13 +1,10 @@
 package ac.kr.changwon.se_proj.controller.login;
 
-import ac.kr.changwon.se_proj.service.Interface.AuthService;
+import ac.kr.changwon.se_proj.dto.LoginRequestDTO;
 import ac.kr.changwon.se_proj.dto.UserDto;
-import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import ac.kr.changwon.se_proj.service.Interface.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,23 +16,33 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
-
-    @Autowired
     private final AuthService authService;
-
     public AuthController(AuthService authService) {
         this.authService = authService;
     }
 
     @PostMapping("/login")
-    public Map<String, Object> login(@RequestBody String userId,
-                                     @RequestBody String password) {
-        boolean result = authService.login(userId, password);
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", result);
-        response.put("message", result ? "Login successful" : "Invalid credentials");
-        return response;
+    public ResponseEntity<Map<String,Object>> login(@RequestBody LoginRequestDTO req) {
+        String userId   = req.getUserId();
+        String password = req.getPassword();
+
+        if (userId == null || userId.isBlank() ||
+                password == null || password.isBlank()) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(Map.of(
+                            "success", false,
+                            "message", "userId와 password는 필수 입력입니다."
+                    ));
+        }
+
+        boolean ok = authService.login(userId, password);
+        return ResponseEntity.ok(Map.of(
+                "success", ok,
+                "message", ok ? "Login successful" : "Invalid credentials"
+        ));
     }
+
 
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody

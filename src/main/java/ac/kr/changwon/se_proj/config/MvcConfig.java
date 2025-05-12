@@ -16,18 +16,21 @@ public class MvcConfig implements WebMvcConfigurer {
 //                .setViewName("forward:/index.html");
 
         // 각각의 경로에 대해, 대응하는 HTML로 포워드
+        // GET /login  → templates/login.html
+        registry.addViewController("/main").
+                setViewName("main");
         registry.addViewController("/login")
-                .setViewName("forward:/login.html");
+                .setViewName("login");
         registry.addViewController("/register")
-                .setViewName("forward:/register.html");
+                .setViewName("register");
         registry.addViewController("/project")
-                .setViewName("forward:/project.html");
+                .setViewName("project");
         registry.addViewController("/task")
-                .setViewName("forward:/task.html");
+                .setViewName("task");
         registry.addViewController("/chat")
-                .setViewName("forward:/chat.html");
+                .setViewName("chat");
         registry.addViewController("/simpleChat")
-                .setViewName("forward:/simpleChat.html");
+                .setViewName("simpleChat");
 
     }
 }

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>simple chat</title>
+</head>
+<body>
+    <h1>simple chat</h1>
+    <input id="message" type="text" placeholder="enter your message">
+    <button onclick="sendMessage()">Send</button>
+
+    <div id="messages"></div>
+    <script>
+        function sendMessage() {
+            const message = document.getElementById('message').value;
+            fetch('/simpleChatService', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({message: message})
+            })
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('messages').innerHTML = data;
+            });
+        }
+    </script>
+</body>
+</html>

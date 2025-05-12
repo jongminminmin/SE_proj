@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>업무(Task) 목록</title>
+</head>
+<body>
+<h1>업무(Task) 목록</h1>
+
+<table border="1">
+    <thead>
+    <tr>
+        <th>업무 번호</th>
+        <th>프로젝트</th>
+        <th>담당자</th>
+        <th>제목</th>
+        <th>설명</th>
+        <th>시작일</th>
+        <th>마감일</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="task : ${tasks}">
+        <td th:text="${task.taskNo}">1</td>
+        <td th:text="${task.projectTitle}">프로젝트명</td>
+        <td th:text="${task.assignee.username}">홍길동</td>
+        <td th:text="${task.taskTitle}">로그인 기능 구현</td>
+        <td th:text="${task.description}">Spring Security</td>
+        <td th:text="${#dates.format(task.dueStart, 'yyyy-MM-dd')}">2025-03-25</td>
+        <td th:text="${#dates.format(task.dueEnd, 'yyyy-MM-dd')}">2025-03-30</td>
+    </tr>
+    </tbody>
+</table>
+
+</body>
+</html>
