@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 @Getter
 @Controller
 public class ChatController {
+    //데모용 채팅 컨트롤러
 
     private final ChatMessageService chatMessageService;
 

@@ -6,7 +6,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
-public class Oauth2LoginSucessController {
+public class Oauth2LoginSuccessController {
 
     @GetMapping("/oauth2/success")
     public String oauth2Success(OAuth2AuthenticationToken authentication) {
