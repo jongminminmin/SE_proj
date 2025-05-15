@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import org.springframework.data.domain.Persistable;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 @Entity
@@ -16,6 +17,7 @@ import java.io.Serializable;
 * email : just e-mail*/
 public class User implements Persistable<String>, Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
 

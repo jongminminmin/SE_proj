@@ -31,16 +31,19 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .requiresChannel(channel -> channel
-                        .anyRequest().requiresSecure())  // 모든 요청에 HTTPS 필수
+//                .requiresChannel(channel -> channel
+//                        .anyRequest().requiresSecure())  // 모든 요청에 HTTPS 필수
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/","/main", "/login", "/register", "/oauth2/**", "/api/**", "/api/auth/**","/api/chat/**","/chat/**","/ws","/ws/**").permitAll()
+                        .requestMatchers("/","/main", "/login","/login.html", "/register", "/oauth2/**", "/api/**", "/api/auth/**","/api/chat/**","/chat/**","/ws","/ws/**").permitAll()
                         .requestMatchers("/resources/**", "/static/**", "/css/**", "/js/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
                         .loginPage("/login")
-                        .defaultSuccessUrl("/main", false)
+                        .loginProcessingUrl("/login")
+                        .usernameParameter("userId")
+                        .passwordParameter("password")
+                        .defaultSuccessUrl("/main", true)
                         .failureUrl("/login?error=true")
                         .permitAll()
                 )
@@ -52,6 +55,10 @@ public class SecurityConfig {
                                 .userService(customOAuth2UserService)
                         )
                 )
+                .sessionManagement(s -> s
+                        .sessionFixation().migrateSession()    // 로그인 시 세션 아이디 재생성
+                        .maximumSessions(1)                    // 중복 로그인 제한
+                        .maxSessionsPreventsLogin(true))        // 기존 세션 유지 or 신규 세션 거부
                 .csrf(AbstractHttpConfigurer::disable);
         return http.build();
     }

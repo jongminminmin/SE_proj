@@ -8,10 +8,16 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.io.Serial;
+import java.io.Serializable;
+
 //로그인 시 사용자가 데이터베이스에 없으면 exception 던지는 걸 던짐
 @Service
 @RequiredArgsConstructor
-public class CustomUserDetailsService implements UserDetailsService {
+public class CustomUserDetailsService implements UserDetailsService, Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     private final UserRepository userRepository;
 

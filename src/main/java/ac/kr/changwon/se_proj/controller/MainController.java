@@ -23,6 +23,11 @@ public class MainController {
         return "index";
     }
 
+    @GetMapping("/main")
+    public String mainPage(){
+        return "main";
+    }
+
     @GetMapping("/project")
     public String projectPage(Model model){
         model.addAttribute("project",projectService.findAll());

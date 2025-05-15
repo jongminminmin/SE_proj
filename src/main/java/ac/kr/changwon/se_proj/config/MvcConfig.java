@@ -1,6 +1,7 @@
 package ac.kr.changwon.se_proj.config;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -19,10 +20,22 @@ public class MvcConfig implements WebMvcConfigurer {
         // GET /login  → templates/login.html
         registry.addViewController("/main").
                 setViewName("main");
+        registry.addViewController("/main.html")
+                        .setViewName("main");
+
+        registry.addViewController("/oauth2/success").
+                setViewName("login");
+
         registry.addViewController("/login")
                 .setViewName("login");
+
+        registry.addViewController("/login.html")
+                        .setViewName("login");
+
         registry.addViewController("/register")
                 .setViewName("register");
+        registry.addViewController("/register.html")
+                        .setViewName("register");
         registry.addViewController("/project")
                 .setViewName("project");
         registry.addViewController("/task")
@@ -32,5 +45,8 @@ public class MvcConfig implements WebMvcConfigurer {
         registry.addViewController("/simpleChat")
                 .setViewName("simpleChat");
 
+
+        //웹 아이콘을 아예 무시
+        registry.addViewController("/favicon.ico").setStatusCode(HttpStatus.NO_CONTENT);
     }
 }

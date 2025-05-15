@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>프로젝트 대시보드</title>
     <style>
+        /* CSS 스타일은 이전과 동일하게 유지됩니다. */
         * {
             margin: 0;
             padding: 0;
@@ -16,7 +17,7 @@
             display: flex;
             background-color: #f5f5f7;
             height: 100vh;
-            overflow: hidden;
+            overflow: hidden; /* 전체 스크롤 방지, 각 영역에서 스크롤 */
         }
 
         /* 사이드바 스타일 */
@@ -24,9 +25,11 @@
             width: 240px;
             background-color: white;
             border-right: 1px solid #e0e0e0;
-            height: 100vh;
+            height: 100vh; /* 화면 전체 높이 */
             padding: 24px 0;
-            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto; /* 사이드바 내용 많을 시 스크롤 */
         }
 
         .sidebar-title {
@@ -34,6 +37,7 @@
             margin-bottom: 24px;
             font-size: 20px;
             font-weight: 600;
+            color: #333;
         }
 
         .sidebar-menu {
@@ -45,28 +49,35 @@
             display: flex;
             align-items: center;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, color 0.2s;
+            color: #555;
+            font-size: 15px;
         }
 
         .sidebar-menu-item:hover {
-            background-color: #f5f5f7;
+            background-color: #f0f0f2;
+            color: #222;
         }
 
         .sidebar-menu-item.active {
-            background-color: #f0f0f2;
+            background-color: #e8e8ea;
+            color: #007aff; /* 활성 메뉴 항목 색상 변경 */
+            font-weight: 500;
         }
 
-        .sidebar-menu-item i {
+        .sidebar-menu-item i.icon { /* 아이콘 클래스 명시 */
             margin-right: 12px;
             width: 20px;
             text-align: center;
+            font-size: 18px; /* 아이콘 크기 조정 */
         }
 
         /* 메인 콘텐츠 스타일 */
         .main-content {
             flex: 1;
             padding: 24px;
-            overflow-y: auto;
+            overflow-y: auto; /* 메인 콘텐츠 내용 많을 시 스크롤 */
+            height: 100vh; /* 화면 전체 높이 */
         }
 
         .header {
@@ -74,20 +85,34 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e0e0e0;
         }
+        .header .title h1 { /* 헤더 타이틀 크기 조정 */
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .header .title p { /* 사용자 환영 메시지 스타일 */
+            font-size: 14px;
+            color: #555;
+            margin-top: 4px;
+        }
+
 
         .logout-btn {
             padding: 8px 16px;
-            background-color: #222;
+            background-color: #007aff; /* 버튼 색상 변경 */
             color: white;
             border: none;
             border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.2s;
         }
 
         .logout-btn:hover {
-            background-color: #333;
+            background-color: #0056b3;
         }
 
         .tabs {
@@ -104,16 +129,17 @@
             border-bottom: 2px solid transparent;
             font-size: 14px;
             color: #666;
+            transition: color 0.2s, border-bottom-color 0.2s;
         }
 
-        .tab.active {
-            border-bottom: 2px solid #222;
-            color: #222;
+        .tab.active, .tab:hover {
+            border-bottom: 2px solid #007aff; /* 활성/호버 탭 색상 변경 */
+            color: #007aff;
             font-weight: 500;
         }
 
         .section {
-            margin-bottom: 48px;
+            margin-bottom: 32px; /* 섹션 간 간격 조정 */
         }
 
         .section-header {
@@ -126,6 +152,7 @@
         .section-title {
             font-size: 20px;
             font-weight: 600;
+            color: #333;
         }
 
         .section-subtitle {
@@ -136,24 +163,32 @@
 
         .card-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* 카드 최소 너비 조정 */
             gap: 20px;
         }
 
         .card {
             background-color: white;
-            border-radius: 12px;
+            border-radius: 8px; /* 통일된 border-radius */
             overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
             transition: transform 0.2s, box-shadow 0.2s;
-            height: 220px;
+            height: 200px; /* 카드 높이 조정 */
             position: relative;
             cursor: pointer;
+            display: flex; /* 내부 요소 정렬을 위해 flex 사용 */
+            flex-direction: column; /* 내부 요소를 세로로 정렬 */
         }
+        .card-content-placeholder { /* 카드 내용이 없을 경우를 위한 임시 배경 */
+            flex-grow: 1;
+            background-color: #f0f0f0; /* 예시 색상 */
+            /* 실제 이미지나 내용을 위한 공간 */
+        }
+
 
         .card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
         }
 
         .add-card {
@@ -161,63 +196,56 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            border: 2px dashed #ddd;
-            background-color: white;
+            border: 2px dashed #d0d0d0;
+            background-color: #fafafa;
             box-shadow: none;
         }
 
         .add-card:hover {
-            border-color: #aaa;
-            background-color: #f9f9f9;
+            border-color: #007aff;
+            background-color: #f5f9ff;
         }
 
         .add-card-icon {
             font-size: 32px;
-            color: #aaa;
+            color: #007aff;
             margin-bottom: 8px;
         }
 
         .add-card-text {
             font-size: 14px;
-            color: #666;
+            color: #333;
+            font-weight: 500;
         }
 
         .card-info {
             padding: 16px;
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            background-color: white;
+            background-color: white; /* 정보 영역 배경색 명시 */
+            border-top: 1px solid #f0f0f0; /* 내용과 구분선 */
         }
 
         .card-title {
-            font-weight: 500;
+            font-weight: 600; /* 제목 굵게 */
             margin-bottom: 4px;
+            font-size: 16px; /* 제목 크기 조정 */
+            color: #333;
         }
 
         .card-description {
             font-size: 13px;
-            color: #666;
-        }
-
-        /* 아이콘 스타일 */
-        .icon {
-            display: inline-block;
-            font-size: 18px;
+            color: #555;
+            line-height: 1.4;
         }
     </style>
 </head>
 <body>
-<!-- 사이드바 -->
 <div class="sidebar">
-    <div class="sidebar-title">대시보드</div>
+    <div class="sidebar-title">Dashboard</div>
     <ul class="sidebar-menu">
         <li class="sidebar-menu-item active">
-            <i class="icon">📋</i>
-            <span>Project</span>
+            <i class="icon">📋</i> <span>Project</span>
         </li>
-        <li class="sidebar-menu-item">
-            <i class="icon">💬</i>
+        <li class="sidebar-menu-item" onclick="navigateToChat()"> <i class="icon">💬</i>
             <span>Chat</span>
         </li>
         <li class="sidebar-menu-item">
@@ -227,24 +255,25 @@
     </ul>
 </div>
 
-<!-- 메인 콘텐츠 -->
 <div class="main-content">
-    <!-- 헤더 -->
     <div class="header">
         <div class="title">
             <h1>대시보드</h1>
+            <p th:if="${#authentication != null and #authentication.name != 'anonymousUser'}">
+                환영합니다, <span th:text="${#authentication.name}">사용자</span>님!
+            </p>
         </div>
-        <button class="logout-btn" onclick="logout()">로그아웃</button>
+        <form th:action="@{/logout}" method="post" style="margin:0;">
+            <button type="submit" class="logout-btn">로그아웃</button>
+        </form>
     </div>
 
-    <!-- 탭 -->
     <div class="tabs">
-        <button class="tab active">전체</button>
-        <button class="tab">진행중</button>
-        <button class="tab">완료</button>
+        <button class="tab active" onclick="filterItems('all')">전체</button>
+        <button class="tab" onclick="filterItems('progress')">진행중</button>
+        <button class="tab" onclick="filterItems('completed')">완료</button>
     </div>
 
-    <!-- 프로젝트 섹션 -->
     <div class="section">
         <div class="section-header">
             <div>
@@ -254,30 +283,36 @@
         </div>
 
         <div class="card-grid">
-            <!-- 새 프로젝트 추가 카드 -->
-            <div class="card add-card">
+            <div class="card add-card" onclick="openAddProjectModal()">
                 <div class="add-card-icon">+</div>
                 <div class="add-card-text">새 프로젝트 추가</div>
             </div>
 
-            <!-- 샘플 프로젝트 카드 (실제로는 동적으로 생성될 것) -->
-            <div class="card">
+            <div class="card project-item" data-status="progress">
+                <div class="card-content-placeholder"></div>
                 <div class="card-info">
-                    <div class="card-title">프로젝트 1</div>
-                    <div class="card-description">진행중인 프로젝트</div>
+                    <div class="card-title">프로젝트 알파</div>
+                    <div class="card-description">차세대 AI 기반 서비스 개발</div>
                 </div>
             </div>
 
-            <div class="card">
+            <div class="card project-item" data-status="completed">
+                <div class="card-content-placeholder" style="background-color: #e6f7ff;"></div>
                 <div class="card-info">
-                    <div class="card-title">프로젝트 2</div>
-                    <div class="card-description">새로운 프로젝트</div>
+                    <div class="card-title">프로젝트 베타</div>
+                    <div class="card-description">데이터 분석 플랫폼 구축</div>
+                </div>
+            </div>
+            <div class="card project-item" data-status="progress">
+                <div class="card-content-placeholder" style="background-color: #fff7e6;"></div>
+                <div class="card-info">
+                    <div class="card-title">프로젝트 감마</div>
+                    <div class="card-description">모바일 앱 리뉴얼</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 태스크 섹션 -->
     <div class="section">
         <div class="section-header">
             <div>
@@ -285,33 +320,30 @@
                 <div class="section-subtitle">할 일을 관리하세요</div>
             </div>
         </div>
-
         <div class="card-grid">
-            <!-- 새 태스크 추가 카드 -->
-            <div class="card add-card">
+            <div class="card add-card" onclick="openAddTaskModal()">
                 <div class="add-card-icon">+</div>
                 <div class="add-card-text">새 태스크 추가</div>
             </div>
-
-            <!-- 샘플 태스크 카드 (실제로는 동적으로 생성될 것) -->
-            <div class="card">
+            <div class="card task-item" data-status="progress">
+                <div class="card-content-placeholder"></div>
                 <div class="card-info">
-                    <div class="card-title">태스크 1</div>
-                    <div class="card-description">진행중인 태스크</div>
+                    <div class="card-title">UI 디자인 검토</div>
+                    <div class="card-description">오늘 오후 3시까지</div>
                 </div>
             </div>
-
-            <div class="card">
+            <div class="card task-item" data-status="progress">
+                <div class="card-content-placeholder" style="background-color: #f0fff0;"></div>
                 <div class="card-info">
-                    <div class="card-title">태스크 2</div>
-                    <div class="card-description">오늘까지</div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-info">
-                    <div class="card-title">태스크 3</div>
+                    <div class="card-title">API 문서화</div>
                     <div class="card-description">내일까지</div>
+                </div>
+            </div>
+            <div class="card task-item" data-status="completed">
+                <div class="card-content-placeholder"></div>
+                <div class="card-info">
+                    <div class="card-title">서버 배포</div>
+                    <div class="card-description">지난 주 완료</div>
                 </div>
             </div>
         </div>
@@ -319,21 +351,44 @@
 </div>
 
 <script>
-    // 로그아웃 함수
-    function logout() {
-        // 로컬 스토리지에서 토큰 제거
-        localStorage.removeItem('token');
-        // 로그인 페이지로 리디렉션
-        window.location.href = '/login.html';
+    // 페이지 로드 시 토큰 확인 로직은 제거됨 (서버 세션 기반 인증 사용)
+
+    // 채팅 페이지 이동 함수
+    function navigateToChat() {
+        // 실제 채팅 페이지 URL로 변경해야 합니다.
+        // 예시: window.location.href = '/chat'; 또는 th:href="@{/chat/list}" 와 같이 서버사이드 URL 사용 권장
+        // 여기서는 임시로 alert 처리
+        alert('채팅 페이지로 이동합니다. (구현 필요)');
+        // window.location.href = '/chat/list'; // 실제 사용 시 주석 해제 및 경로 확인
     }
 
-    // 페이지 로드 시 토큰 확인
+    // 탭 필터링 함수 (간단한 예시)
+    function filterItems(status) {
+        document.querySelectorAll('.tabs .tab').forEach(tab => tab.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+
+        const items = document.querySelectorAll('.project-item, .task-item');
+        items.forEach(item => {
+            if (status === 'all' || item.dataset.status === status) {
+                item.style.display = 'flex'; // 또는 'grid' 등 원래 display 속성
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    // 모달 열기 함수 (예시)
+    function openAddProjectModal() {
+        alert('새 프로젝트 추가 모달을 엽니다. (구현 필요)');
+    }
+
+    function openAddTaskModal() {
+        alert('새 태스크 추가 모달을 엽니다. (구현 필요)');
+    }
+
+    // 페이지 로드 시 기본 필터 '전체' 적용
     document.addEventListener('DOMContentLoaded', function() {
-        const token = localStorage.getItem('token');
-        // 토큰이 없으면 로그인 페이지로 리디렉션
-        if (!token) {
-            window.location.href = '/login.html';
-        }
+        filterItems('all');
     });
 </script>
 </body>
