@@ -74,11 +74,4 @@ public class MainController {
         // /chat 경로도 React 앱의 index.html로 포워딩
         return "forward:/index.html";
     }
-
-    // 만약 /oauth2/success 경로도 React 클라이언트에서 처리해야 한다면,
-    // 해당 경로에 대한 매핑도 추가합니다.
-    @GetMapping("/oauth2/success")
-    public String oauth2SuccessPage() {
-        return "forward:/index.html";
-    }
 }
