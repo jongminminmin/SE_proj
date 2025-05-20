@@ -1,11 +1,10 @@
-import logo from './logo.svg';
 import './App.css';
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Main from './pages/Main';
 import Task from './pages/Task';
-import { Routes, Route } from 'react-router-dom';
+import {Route, Routes} from 'react-router-dom';
 
 function App() {
   return (
