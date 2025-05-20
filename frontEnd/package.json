@@ -1,5 +1,5 @@
 {
-  "name": "se_prj",
+  "name": "proj",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -7,29 +7,31 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.9.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-router-dom": "^7.5.3",
+    "react-router-dom": "^7.6.0",
     "react-scripts": "5.0.1",
     "web-vitals": "^2.1.4"
   },
-  "devDependencies": {
-    "@eslint/js": "^9.22.0",
-    "@types/react": "^19.0.10",
-    "@types/react-dom": "^19.0.4",
-    "@vitejs/plugin-react": "^4.3.4",
-    "eslint": "^9.22.0",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.19",
-    "globals": "^16.0.0",
-    "vite": "^6.3.1"
+  "config": {
+    "reactBuildDir": "build",
+    "springStaticResourcesDir": "../src/main/resources/static"
   },
-  "proxy" : "61.253.140.23:9000",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+
+
+    "clean:spring-target-static-dir": "rimraf \"${npm_package_config_springStaticResourcesDir}/static\"",
+    "clean:spring-target-root-assets": "shx rm -f \"${npm_package_config_springStaticResourcesDir}/index.html\" \"${npm_package_config_springStaticResourcesDir}/favicon.ico\" \"${npm_package_config_springStaticResourcesDir}/manifest.json\" \"${npm_package_config_springStaticResourcesDir}/robots.txt\" \"${npm_package_config_springStaticResourcesDir}/asset-manifest.json\" \"${npm_package_config_springStaticResourcesDir}\"/*.png",
+
+    "copy:react-static-to-spring": "cpx \"${npm_package_config_reactBuildDir}/static/**/*\" \"${npm_package_config_springStaticResourcesDir}/static\" --verbose",
+    "copy:react-root-assets-to-spring": "cpx \"${npm_package_config_reactBuildDir}/{index.html,favicon.ico,manifest.json,robots.txt,asset-manifest.json,*.png,*.svg,*.jpg,*.jpeg}\" \"${npm_package_config_springStaticResourcesDir}\" --verbose",
+
+    "build-and-copy-to-spring": "npm run build && npm run clean:spring-target-static-dir && npm run clean:spring-target-root-assets && npm run copy:react-static-to-spring && npm run copy:react-root-assets-to-spring"
   },
   "eslintConfig": {
     "extends": [
@@ -48,5 +50,10 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "cpx": "^1.5.0",
+    "rimraf": "^6.0.1",
+    "shx": "^0.4.0"
   }
 }
