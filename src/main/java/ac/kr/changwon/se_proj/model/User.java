@@ -6,6 +6,7 @@ import org.springframework.data.domain.Persistable;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user")
@@ -39,6 +40,15 @@ public class User implements Persistable<String>, Serializable {
 
     @Transient
     private boolean isNew = false;
+
+
+    // 비밀번호 재설정 토큰 필드 추가
+    @Column(name = "password_reset_token")
+    private String passwordResetToken;
+
+    // 비밀번호 재설정 토큰 만료 시간 필드 추가
+    @Column(name = "password_reset_token_expiry")
+    private LocalDateTime passwordResetTokenExpiry;
 
     public User(String id, String username, String password, String email) {
         this.id = id;
@@ -77,4 +87,6 @@ public class User implements Persistable<String>, Serializable {
     void markNotNew() {
         this.isNew = false;
     }
+
+    //public Object getUserId() {}
 }

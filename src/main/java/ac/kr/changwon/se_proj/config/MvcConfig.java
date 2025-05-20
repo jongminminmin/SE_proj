@@ -53,25 +53,33 @@ public class MvcConfig implements WebMvcConfigurer {
 //        //웹 아이콘을 아예 무시
 //        registry.addViewController("/favicon.ico").setStatusCode(HttpStatus.NO_CONTENT);
 //    }
-
-    public void addResourceHandler(ResourceHandlerRegistry registry){
-        registry.addResourceHandler("/**")//모든 패턴에 대해 일치
-                .addResourceLocations("classpath:/static/")//resource/static에 있는 static디렉터리 서빙
-                .resourceChain(true)
-                //SPA (Single Page Application) fallback 로직
-                .addResolver(new PathResourceResolver() {
-                    @Override
-                    protected Resource getResource(String resourcePath, Resource location) throws IOException {
-                        Resource requestedResource = location.createRelative(resourcePath);
-                        if(requestedResource.exists() && requestedResource.isReadable()){
-                            return requestedResource;
-                        }
-                        else {
-                            return new ClassPathResource("/static/index.html");
+@Override
+public void addResourceHandlers(ResourceHandlerRegistry registry) {
+    registry.addResourceHandler("/**") // 모든 경로에 대해
+            .addResourceLocations("classpath:/static/") // src/main/resources/static/ 에서 리소스를 찾음
+            .resourceChain(true)
+            .addResolver(new PathResourceResolver() {
+                @Override
+                protected Resource getResource(String resourcePath, Resource location) throws IOException {
+                    Resource requestedResource = location.createRelative(resourcePath);
+                    // 요청된 리소스가 존재하고 읽을 수 있으면 해당 리소스를 반환
+                    if (requestedResource.exists() && requestedResource.isReadable()) {
+                        return requestedResource;
+                    } else {
+                        // 그렇지 않으면 index.html로 폴백 (SPA 라우팅 지원)
+                        // index.html 파일 자체가 src/main/resources/static/ 에 있는지 확인
+                        Resource indexHtml = new ClassPathResource("/static/index.html");
+                        if (indexHtml.exists()) {
+                            return indexHtml;
+                        } else {
+                            // 개발/디버깅 시 index.html이 없는 경우를 파악하기 위한 로그
+                            System.err.println("중요: SPA Fallback을 위한 /static/index.html 파일을 찾을 수 없습니다!");
+                            // IOException을 발생시켜 명시적으로 오류를 알릴 수도 있습니다.
+                            // throw new IOException("Fallback index.html not found at classpath:/static/index.html");
+                            return null; // 또는 적절한 오류 처리
                         }
                     }
-                });
+                }
+            });
     }
-
-
 }
