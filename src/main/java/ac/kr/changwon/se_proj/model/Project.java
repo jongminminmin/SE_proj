@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.util.Date;
 
 @Entity
@@ -31,6 +32,18 @@ public class Project {
     @Column(nullable = false)
     private String projectMemberTier;
 
+    /*
+    public Project(int projectId, String projectTitle, String description, User owner, Date date, String projectMemberTier) {
+        this.project_id = projectId;
+        this.projectTitle = projectTitle;
+        this.description = description;
+        this.owner = owner;
+        this.projectMemberTier = projectMemberTier;
+        this.date = date;
+    }
+    */
+    public Project(int projectId, String projectTitle, String description, String ownerId, LocalDate date, String projectMemberTier) {
+    }
 }
 
 /* 프로젝트 생성 시
