@@ -25,9 +25,9 @@ public class ProjectServiceImpl implements ProjectService {
 
     public void createProject(ProjectRequestDTO dto) {
         Project project = new Project(
-            dto.getProject_id(), dto.getProject_title(),
-                dto.getDescription(), dto.getOwner_id(),
-                dto.getDate(), dto.getProject_member_tier()
+            dto.getProjectId(), dto.getProjectTitle(),
+                dto.getDescription(), dto.getOwnerId(),
+                dto.getDate(), dto.getProjectMemberTier()
         );
         projectRepository.save(project);
     }

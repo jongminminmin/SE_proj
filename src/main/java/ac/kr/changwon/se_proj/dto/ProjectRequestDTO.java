@@ -8,11 +8,11 @@ import java.time.LocalDate;
 @Getter
 @Setter
 public class ProjectRequestDTO {
-    private int project_id;
-    private String project_title;
+    private int projectId;
+    private String projectTitle;
     private String description;
-    private String owner_id;
+    private String ownerId;
     private LocalDate date;
-    private String project_member_tier;
+    private String projectMemberTier;
 
 }

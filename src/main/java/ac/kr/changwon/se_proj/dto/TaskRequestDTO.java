@@ -4,9 +4,9 @@ import java.time.LocalDate;
 
 public class TaskRequestDTO {
     private int task_no;
-    private String task_title;
-    private String assignee_id;
+    private String taskTitle;
+    private String assigneeId;
     private String description;
-    private LocalDate due_start;
-    private LocalDate due_end;
+    private LocalDate dueStart;
+    private LocalDate dueEnd;
 }
