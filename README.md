@@ -62,7 +62,7 @@ figma에서 제공하는 기본 페이지 디자인을 바탕으로 색상 및 �
 
 또는
 
-``sudo mysql -h 61.253.140.23 -P 3306 -u root -p projdata``
+``sudo mysql -h 61.253.140.23 -P 3306 -u admin -p projdata``
 
 로 접근 시 접근이 정상적으로 가능함.
 
@@ -70,9 +70,10 @@ Intelij IDE 사용시 어플리케이션 프로퍼티에 작성해놓은 드라�
 
 호스트 : 61.253.140.23
 
-사용자 :root 또는 public_test_user
+사용자 : **admin** 또는 **public_test_user**
 
 비밀번호는 둘 다 1234로 동일.
+
 
 데이터베이스는 projdata 사용.
 
