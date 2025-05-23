@@ -190,6 +190,9 @@ function Login() {
                     계정이 없으신가요?{' '}
                     <span onClick={goToRegister}>회원가입</span>
                 </div>
+                <div className="find-links">
+                    <span onClick={goToFindAccount}>아이디 / 비밀번호 찾기</span>
+                </div>
                 {/* 아이디/비밀번호 찾기 링크 또는 버튼을 여기에 추가하고,
                     클릭 시 해당 UI(모달 등)를 보여주고,
                     그 UI의 폼에서 handleFindIdSubmit 또는 handleFindPasswordSubmit 함수를 호출하도록 구현해야 합니다.
