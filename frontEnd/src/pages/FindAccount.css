@@ -1,0 +1,104 @@
+.form-description {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 20px;
+    text-align: center;
+    line-height: 1.5;
+}
+
+/* 입력 필드 */
+.find-input {
+    width: 100%;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    box-sizing: border-box;
+    transition: border-color 0.3s;
+}
+
+.find-input:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+/* 메시지 */
+.error-message {
+    color: #dc3545;
+    font-size: 14px;
+    margin: 10px 0;
+    padding: 10px;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.success-message {
+    color: #155724;
+    font-size: 14px;
+    margin: 10px 0;
+    padding: 10px;
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    border-radius: 4px;
+    text-align: center;
+}
+
+/* 버튼 */
+.find-submit-btn {
+    width: 100%;
+    padding: 12px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-top: 10px;
+}
+
+.find-submit-btn:hover {
+    background-color: #0056b3;
+}
+
+/* 로그인으로 돌아가기 */
+.back-to-login {
+    margin-top: 30px;
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    color: #007bff;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.back-btn:hover {
+    color: #0056b3;
+    text-decoration: underline;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 480px) {
+    .find-account-box {
+        padding: 30px 20px;
+    }
+
+    .find-account-title {
+        font-size: 20px;
+    }
+
+    .tab-button {
+        font-size: 14px;
+    }
+}
