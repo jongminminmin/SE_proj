@@ -53,28 +53,29 @@ class WebSocketControllerTest {
     @BeforeEach
     void setUp(){
         chatMessageDTO = new ChatMessageDTO();
-        chatMessageDTO.setRoomId(1);//개인 채팅방
+        chatMessageDTO.setRoomId(1);//개인 채팅방 기본 설정
         chatMessageDTO.setContent("testContent");
-        chatMessageDTO.setUsername("testUser");
+        chatMessageDTO.setUsername("testUser"); // DTO의 기본 username 설정
         chatMessageDTO.setTimestamp(LocalDateTime.now());
 
         testUser = new User("testId", "testUsername", "encodedPassword", "<PASSWORD>", "ROLE_USER");
 
         mockPrincipal = mock(Principal.class);
 
-        when(mockPrincipal.getName()).thenReturn("testUsername");
-
-
         when(chatProperties.getPrivateMaxRoomId()).thenReturn(10);
-
     }
 
 
     @Test
-    @DisplayName("sendMessage - if exist Principal then success sending Message")
+    @DisplayName("sendMessage - if exist Principal then sucess sending Message")
     void sendMessage_withPrincipal_sendsPrivateMessageSuccessfully(){
-        when(mockPrincipal.getName()).thenReturn("testUsername"); // Principal이 사용되므로 여기서 stubbing
+        // Principal을 사용하는 테스트이므로, mockPrincipal.getName()에 대한 stubbing을 여기에 추가합니다.
+        when(mockPrincipal.getName()).thenReturn("testUsername");
 
+        // chatMessageDTO의 roomId를 개인 채팅방으로 설정 (setUp에서 이미 1로 되어 있지만 명시적으로)
+        chatMessageDTO.setRoomId(1);
+
+        // userRepository.findByUsername 호출 시 mockPrincipal.getName()의 반환값("testUsername")을 사용합니다.
         when(userRepository.findByUsername("testUsername")).thenReturn(Optional.of(testUser));
         when(chatMessageRepository.save(any(ChatMessage.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -90,24 +91,28 @@ class WebSocketControllerTest {
     @Test
     @DisplayName("sendMessage - Principal null, DTO username 사용 시 그룹 메시지 전송 성공")
     void sendMessage_withoutPrincipal_sendsGroupMessageSuccessfully() {
-        // given
-        chatMessageDTO.setRoomId(11);
+        chatMessageDTO.setRoomId(11); // 그룹 채팅방 ID로 변경
         when(userRepository.findByUsername("testUser")).thenReturn(Optional.of(testUser));
         when(chatMessageRepository.save(any(ChatMessage.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // when
-        webSocketController.sendMessage(chatMessageDTO, null);
+        webSocketController.sendMessage(chatMessageDTO, null); // Principal null 전달
 
         // then
         verify(userRepository).findByUsername("testUser");
         verify(chatMessageRepository).save(any(ChatMessage.class));
+        // chatProperties.getPrivateMaxRoomId()가 10으로 설정되어 있고, roomId가 11이므로 그룹 목적지로 가야 함
         verify(messagingTemplate).convertAndSend(eq("/topic/group/11"), any(ChatMessageDTO.class));
     }
 
     @Test
     @DisplayName("sendMessage - 사용자 찾을 수 없을 때 UsernameNotFoundException 발생")
     void sendMessage_userNotFound_throwsUsernameNotFoundException() {
+        // Principal을 사용하는 테스트이므로, mockPrincipal.getName()에 대한 stubbing을 여기에 추가합니다.
+        when(mockPrincipal.getName()).thenReturn("testUsername");
+
         // given
+        // userRepository.findByUsername 호출 시 mockPrincipal.getName()의 반환값("testUsername")을 사용합니다.
         when(userRepository.findByUsername("testUsername")).thenReturn(Optional.empty());
 
         // when & then
@@ -122,30 +127,31 @@ class WebSocketControllerTest {
     @Test
     @DisplayName("sendMessage - 메시지 저장 및 전송 시 DTO 필드 업데이트 확인")
     void sendMessage_updatesDtoFieldsCorrectly() {
+        // Principal을 사용하는 테스트이므로, mockPrincipal.getName()에 대한 stubbing을 여기에 추가합니다.
+        when(mockPrincipal.getName()).thenReturn("testUsername");
+
+        // chatMessageDTO의 roomId를 개인 채팅방으로 설정 (setUp에서 이미 1로 되어 있지만 명시적으로)
+        chatMessageDTO.setRoomId(1);
+
         // given
+        // userRepository.findByUsername 호출 시 mockPrincipal.getName()의 반환값("testUsername")을 사용합니다.
         when(userRepository.findByUsername("testUsername")).thenReturn(Optional.of(testUser));
-        // ChatMessage의 빌더는 그대로 사용 가능 (ChatMessage.java에 @Builder가 있으므로)
+
         ChatMessage savedMessage = ChatMessage.builder()
-                .sender(testUser)
+                .sender(testUser) // testUser의 username은 "testUsername"
                 .content(chatMessageDTO.getContent())
-                .username(testUser.getUsername()) // User 객체의 getter 사용
+                .username(testUser.getUsername()) // "testUsername"
                 .timestamp(chatMessageDTO.getTimestamp())
                 .roomId(chatMessageDTO.getRoomId())
                 .build();
         when(chatMessageRepository.save(any(ChatMessage.class))).thenReturn(savedMessage);
 
 
-        // when
+
         webSocketController.sendMessage(chatMessageDTO, mockPrincipal);
 
-        // then
-        assertEquals(testUser.getId(), chatMessageDTO.getSenderId()); // User 객체의 getter 사용
+        assertEquals(String.valueOf(testUser.getId()), chatMessageDTO.getSenderId());
         assertEquals(savedMessage.getTimestamp(), chatMessageDTO.getTimestamp());
         verify(messagingTemplate).convertAndSend(eq("/topic/private/1"), eq(chatMessageDTO));
     }
-
-
 }
-
-
-
