@@ -12,7 +12,8 @@ Dockerfile
 gradlew.bat
 myapp.cer
 start-container.bat
-/frontEnd/package.json
+/frontend/package.json
+/frontend/node_modules
 
 
 ### STS ###
@@ -47,4 +48,4 @@ out/
 .vscode/
 
 /src/main/resources/application.properties
-/src/main/resources/keystore.p12
+/src/main/resources/keystore.jks

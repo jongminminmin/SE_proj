@@ -1,5 +1,18 @@
 /gradlew text eol=lf
-*.bat text eol=crlf
-*.jar binary
+
+# 모든 텍스트 파일에 대해 Git이 자동으로 줄바꿈을 처리하도록 설정
 * text=auto
-*.json text eol=lf
+
+# 특정 확장자 파일들은 항상 LF로 통일 (Unix/macOS 스타일)
+*.js    text eol=lf
+*.css   text eol=lf
+*.html  text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+
+# Windows 스크립트 파일 등 CRLF가 필요한 경우
+# *.bat   text eol=crlf
+
+# 바이너리 파일은 변환하지 않도록 지정
+*.png   binary
+*.jpg   binary

@@ -10,8 +10,9 @@
     "axios": "^1.9.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-router": "^7.6.0",
     "react-router-dom": "^7.6.0",
-    "react-scripts": "5.0.1",
+    "react-scripts": "^5.0.1",
     "web-vitals": "^2.1.4"
   },
   "config": {
@@ -20,18 +21,12 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build:react": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts build",
+    "build:copy-files": "node src/build-helper.js",
+    "build": "npm-run-all build:react build:copy-files",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-
-
-    "clean:spring-target-static-dir": "rimraf \"${npm_package_config_springStaticResourcesDir}/static\"",
-    "clean:spring-target-root-assets": "shx rm -f \"${npm_package_config_springStaticResourcesDir}/index.html\" \"${npm_package_config_springStaticResourcesDir}/favicon.ico\" \"${npm_package_config_springStaticResourcesDir}/manifest.json\" \"${npm_package_config_springStaticResourcesDir}/robots.txt\" \"${npm_package_config_springStaticResourcesDir}/asset-manifest.json\" \"${npm_package_config_springStaticResourcesDir}\"/*.png",
-
-    "copy:react-static-to-spring": "cpx \"${npm_package_config_reactBuildDir}/static/**/*\" \"${npm_package_config_springStaticResourcesDir}/static\" --verbose",
-    "copy:react-root-assets-to-spring": "cpx \"${npm_package_config_reactBuildDir}/{index.html,favicon.ico,manifest.json,robots.txt,asset-manifest.json,*.png,*.svg,*.jpg,*.jpeg}\" \"${npm_package_config_springStaticResourcesDir}\" --verbose",
-
-    "build-and-copy-to-spring": "npm run build && npm run clean:spring-target-static-dir && npm run clean:spring-target-root-assets && npm run copy:react-static-to-spring && npm run copy:react-root-assets-to-spring"
+    "test:envvars": "node -p \"'BuildDir=' + process.env.npm_package_config_reactBuildDir + ' SpringDir=' + process.env.npm_package_config_springStaticResourcesDir\""
   },
   "eslintConfig": {
     "extends": [
@@ -52,7 +47,8 @@
     ]
   },
   "devDependencies": {
-    "cpx": "^1.5.0",
+    "cpx": "^1.2.1",
+    "cross-env": "^7.0.3",
     "rimraf": "^6.0.1",
     "shx": "^0.4.0"
   }
