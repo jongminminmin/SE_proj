@@ -41,7 +41,6 @@ function Login() {
             });
 
             const data = await response.json();
-
             if (response.ok && data.success) {
                 setFindIdResult(`찾으시는 아이디는 [${data.userId}] 입니다.`); // 실제 운영 시 아이디 전체 노출 주의
             } else {
@@ -148,6 +147,11 @@ function Login() {
         navigate('/register');
     };
 
+    // 아이디/비밀번호 찾기 페이지로 이동하는 함수 추가
+    const goToFindAccount = () => {
+        navigate('/find-account');
+    };
+
     return (
         <div className="login-container">
             <form className="login-form" onSubmit={handleLogin}>
@@ -186,12 +190,12 @@ function Login() {
                     required
                 />
                 <button type="submit" className="login-btn">로그인</button>
+                <div className="find-links">
+                    <span onClick={goToFindAccount}>아이디/비밀번호 찾기</span>
+                </div>
                 <div className="register-link">
                     계정이 없으신가요?{' '}
                     <span onClick={goToRegister}>회원가입</span>
-                </div>
-                <div className="find-links">
-                    <span onClick={goToFindAccount}>아이디 / 비밀번호 찾기</span>
                 </div>
                 {/* 아이디/비밀번호 찾기 링크 또는 버튼을 여기에 추가하고,
                     클릭 시 해당 UI(모달 등)를 보여주고,

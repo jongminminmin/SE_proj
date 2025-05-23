@@ -13,7 +13,7 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
-          <Route path="/find-account" element={<FindAccount />} />
+        <Route path="/find-account" element={<FindAccount />} />
         <Route path="/register" element={<Register />} />
         <Route path="/main" element={<Main />} />
         <Route path="/task" element={<Task />} />

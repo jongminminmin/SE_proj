@@ -55,10 +55,32 @@
   background: #2563eb;
 }
 
+.find-links {
+  text-align: center;
+  margin: 20px 0 8px 0;
+  color: #888;
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+.find-links span {
+  color: #007bff;
+  cursor: pointer;
+  text-decoration: none;
+  padding: 0 5px;
+  transition: all 0.3s ease;
+}
+
+.find-links span:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
 .register-link {
   text-align: center;
   color: #888;
   font-size: 0.98rem;
+  margin-top: 8px;
 }
 
 .register-link span {
@@ -72,3 +94,4 @@
 .register-link span:hover {
   text-decoration: underline;
 } 
+
