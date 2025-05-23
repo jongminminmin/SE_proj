@@ -9,7 +9,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "user")
+@Table(name = "\"user\"")
 @Data
 /* indicate for user.
 * username : nickname
@@ -31,7 +31,7 @@ public class User implements Persistable<String>, Serializable {
     @Column(nullable = false)
     private String username;
 
-    @Column(nullable = true, unique = true)
+    @Column(nullable = false, unique = true)
     private String password;
 
     private String email;

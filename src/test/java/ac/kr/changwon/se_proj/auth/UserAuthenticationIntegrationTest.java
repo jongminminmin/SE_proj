@@ -1,6 +1,7 @@
 package ac.kr.changwon.se_proj.auth;
 
 
+import ac.kr.changwon.se_proj.config.TestSecurityConfig;
 import ac.kr.changwon.se_proj.dto.LoginRequestDTO;
 import ac.kr.changwon.se_proj.dto.UserDto;
 import ac.kr.changwon.se_proj.model.User;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -43,6 +45,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @AutoConfigureMockMvc
 @ActiveProfiles
 @Transactional
+@Import(TestSecurityConfig.class)
 public class UserAuthenticationIntegrationTest {
 
     @Autowired
@@ -127,7 +130,7 @@ public class UserAuthenticationIntegrationTest {
                 .andExpect(jsonPath("$.success").value(false)); // success 필드는 false
 
 
-        actions.andExpect(jsonPath("$.message").value("존재하지 않는 사용자nonexistentuser"));
+        actions.andExpect(jsonPath("$.message").value("존재하지 않는 사용자 nonexistentuser"));
     }
 
     @Test

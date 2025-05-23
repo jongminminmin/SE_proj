@@ -13,11 +13,11 @@ import java.util.Date;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table
+@Table(name = "\"project\"")
 public class Project {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int project_id;
+    private int projectId;
 
     private String projectTitle;
     private String description;

@@ -1,5 +1,6 @@
 package ac.kr.changwon.se_proj.auth;
 
+import ac.kr.changwon.se_proj.config.TestSecurityConfig;
 import ac.kr.changwon.se_proj.dto.LoginRequestDTO;
 import ac.kr.changwon.se_proj.dto.UserDto;
 import ac.kr.changwon.se_proj.service.Interface.AuthService;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -31,6 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest // 어노테이션 변경
 @AutoConfigureMockMvc // MockMvc 자동 설정을 위해 추가
+@Import(TestSecurityConfig.class)
 class AuthControllerTest {
 
     @Autowired

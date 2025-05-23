@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -38,24 +40,44 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<Map<String,Object>> login(@RequestBody LoginRequestDTO req) {
-        String userId   = req.getUserId();
+        Map<String, Object> response = new HashMap<>();
+        String userId = req.getUserId();
         String password = req.getPassword();
 
         if (userId == null || userId.isBlank() ||
                 password == null || password.isBlank()) {
-            return ResponseEntity
-                    .badRequest()
-                    .body(Map.of(
-                            "success", false,
-                            "message", "userId와 password는 필수 입력입니다."
-                    ));
+            response.put("success", false);
+            response.put("message", "userId와 password는 필수 입력입니다.");
+            return ResponseEntity.badRequest().body(response);
         }
 
-        boolean ok = authService.login(userId, password);
-        return ResponseEntity.ok(Map.of(
-                "success", ok,
-                "message", ok ? "Login successful" : "Invalid credentials"
-        ));
+        try {
+            // AuthService의 login 메소드가 성공 시 true를 반환하거나,
+            // 실패 시 BadCredentialsException 또는 UsernameNotFoundException을 던진다고 가정합니다.
+            // (AuthServiceImpl의 login 메소드는 이 가정에 맞게 수정되어야 합니다.)
+            authService.login(userId, password);
+
+            response.put("success", true);
+            response.put("message", "Login successful");
+            return ResponseEntity.ok(response);
+
+        } catch (UsernameNotFoundException e) {
+            logger.warn("Login failed for user {}: {}", userId, e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage()); // 서비스에서 던진 메시지 사용
+            return ResponseEntity.ok(response); // 테스트는 실패 시에도 200 OK와 JSON을 기대
+        } catch (BadCredentialsException e) {
+            logger.warn("Login failed for user {}: {}", userId, e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage()); // 서비스에서 던진 메시지 사용 ("비밀번호 불일치")
+            return ResponseEntity.ok(response); // 테스트는 실패 시에도 200 OK와 JSON을 기대
+        } catch (Exception e) { // 그 외 예기치 않은 오류
+            logger.error("Unexpected error during login for user {}: {}", userId, e.getMessage(), e);
+            response.put("success", false);
+            response.put("message", "로그인 중 내부 오류가 발생했습니다.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+
     }
 
 

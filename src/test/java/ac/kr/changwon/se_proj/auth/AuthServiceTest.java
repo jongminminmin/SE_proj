@@ -1,5 +1,6 @@
 package ac.kr.changwon.se_proj.auth;
 
+import ac.kr.changwon.se_proj.config.TestSecurityConfig;
 import ac.kr.changwon.se_proj.model.User;
 import ac.kr.changwon.se_proj.repository.UserRepository;
 // AuthService 인터페이스 대신 AuthServiceImpl 구현 클래스를 직접 임포트할 수 있습니다.
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks; // @InjectMocks 임포트
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,6 +26,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class) // 순수 Mockito 테스트를 위함
+@Import(TestSecurityConfig.class)
 public class AuthServiceTest {
 
     @Mock // UserRepository는 의존성이므로 @Mock으로 선언
