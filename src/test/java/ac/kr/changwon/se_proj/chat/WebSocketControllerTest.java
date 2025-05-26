@@ -67,7 +67,7 @@ class WebSocketControllerTest {
 
 
     @Test
-    @DisplayName("sendMessage - if exist Principal then sucess sending Message")
+    @DisplayName("sendMessage - if exist Principal then success sending Message")
     void sendMessage_withPrincipal_sendsPrivateMessageSuccessfully(){
         // Principal을 사용하는 테스트이므로, mockPrincipal.getName()에 대한 stubbing을 여기에 추가합니다.
         when(mockPrincipal.getName()).thenReturn("testUsername");

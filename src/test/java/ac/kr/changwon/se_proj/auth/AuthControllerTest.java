@@ -132,45 +132,39 @@ class AuthControllerTest {
 
     @Test
     @DisplayName("회원가입 성공 테스트")
-    void register_success() throws Exception {
-        given(authService.register(userDto.getId(), userDto.getUsername(), userDto.getPassword(), userDto.getEmail()))
+    void register_success() throws Exception{
+        given(authService.register(eq(userDto.getId()), eq(userDto.getUsername()), eq(userDto.getPassword()), eq(userDto.getEmail())))
                 .willReturn(true);
-
-        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.add("id", userDto.getId());
-        params.add("username", userDto.getUsername());
-        params.add("password", userDto.getPassword());
-        params.add("email", userDto.getEmail());
 
         ResultActions actions = mockMvc.perform(post("/api/auth/register")
                 .with(csrf())
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .params(params));
+                .contentType(MediaType.APPLICATION_JSON) // <--- JSON으로 변경
+                .content(objectMapper.writeValueAsString(userDto))); // <--- userDto를 JSON 문자열로 변환하여 본문에 포함
 
-        actions.andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login")) // 회원가입 성공 시 /login으로 리다이렉트
-                .andExpect(flash().attribute("registrationSuccess", "회원가입이 성공적으로 완료되었습니다. 로그인해주세요."));
+        // AuthController.register가 JSON 응답을 반환하도록 수정되었다고 가정
+        actions.andDo(print())
+                .andExpect(status().isOk()) // 또는 성공 시 201 Created 등
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("회원가입이 성공적으로 완료되었습니다. 로그인해주세요."));
     }
 
     @Test
     @DisplayName("회원가입 실패 테스트 - 이미 존재하는 아이디")
     void register_failure_alreadyExists() throws Exception {
-        given(authService.register(userDto.getId(), userDto.getUsername(), userDto.getPassword(), userDto.getEmail()))
-                .willReturn(false); // 예를 들어 ID나 이메일이 이미 존재
-
-        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.add("id", userDto.getId());
-        params.add("username", userDto.getUsername());
-        params.add("password", userDto.getPassword());
-        params.add("email", userDto.getEmail());
+        given(authService.register(eq(userDto.getId()), eq(userDto.getUsername()), eq(userDto.getPassword()), eq(userDto.getEmail())))
+                .willReturn(false); // 서비스가 false 반환 (중복 등으로)
 
         ResultActions actions = mockMvc.perform(post("/api/auth/register")
                 .with(csrf())
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .params(params));
+                .contentType(MediaType.APPLICATION_JSON) // <--- JSON으로 변경
+                .content(objectMapper.writeValueAsString(userDto))); // <--- userDto를 JSON으로
 
-        actions.andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/register")) // 회원가입 실패 시 /register로 리다이렉트
-                .andExpect(flash().attribute("registrationError", "이미 존재하는 아이디이거나 회원가입에 실패했습니다. 다시 시도해주세요."));
+        // AuthController.register가 ID/이메일 중복 시 409 Conflict와 JSON 응답을 반환한다고 가정
+        actions.andDo(print())
+                .andExpect(status().isConflict()) // HTTP 409 Conflict 기대
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("이미 존재하는 아이디 또는 이메일 입니다.")); // 컨트롤러 반환 메시지에 따라
     }
 }

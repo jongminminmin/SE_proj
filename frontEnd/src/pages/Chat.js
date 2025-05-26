@@ -1,6 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Client } from '@stomp/stompjs';
+import { useNavigate } from "react-router-dom";
 
-// 기본 아이콘 컴포넌트들
+// SVG 아이콘 컴포넌트들
 const Send = ({ style }) => (
     <svg style={{ width: '20px', height: '20px', ...style }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -53,129 +55,327 @@ const ChevronRight = ({ style }) => (
     </svg>
 );
 
+// 이 상수는 서버 설정에서 가져오는 것이 좋습니다.
+const PRIVATE_ROOM_MAX_ID_FROM_SERVER = 10;
+
 const Chat = () => {
     const [messages, setMessages] = useState({});
     const [newMessage, setNewMessage] = useState('');
     const [isConnected, setIsConnected] = useState(false);
-    const [socket, setSocket] = useState(null);
-    const [currentChatRoom, setCurrentChatRoom] = useState('project_001');
+    const stompClientRef = useRef(null);
+
+    const [chatRooms, setChatRooms] = useState([]);
+    const [currentChatRoom, setCurrentChatRoom] = useState(null);
+    const [roomParticipants, setRoomParticipants] = useState({});
+
+    const [chatRoomsLoading, setChatRoomsLoading] = useState(true);
+    const [chatRoomsError, setChatRoomsError] = useState('');
+    const [participantsLoading, setParticipantsLoading] = useState(false);
+
+    // 전체 사용자 목록 관련
+    const [allUsers, setAllUsers] = useState([]);
+    const [allUsersLoading, setAllUsersLoading] = useState(false);
+    const [allUsersError, setAllUsersError] = useState('');
+
     const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
-    const [currentUser] = useState({
-        id: 'user_001',
-        name: '나',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=40&h=40&fit=crop&crop=face'
-    });
-
-    // 프로젝트별 채팅방 목록
-    const [chatRooms] = useState([
-        {
-            id: 'project_001',
-            name: '웹 애플리케이션 개발',
-            description: '메인 프로젝트 채팅방',
-            lastMessage: '개발 일정 논의 필요합니다',
-            lastMessageTime: '오후 3:42',
-            unreadCount: 2,
-            isActive: true,
-            participants: 5,
-            color: '#3B82F6'
-        },
-        {
-            id: 'project_002',
-            name: '모바일 앱 기획',
-            description: 'UI/UX 디자인 논의',
-            lastMessage: '와이어프레임 검토 완료',
-            lastMessageTime: '오후 2:15',
-            unreadCount: 0,
-            isActive: true,
-            participants: 3,
-            color: '#10B981'
-        },
-        {
-            id: 'project_003',
-            name: '데이터베이스 설계',
-            description: '백엔드 아키텍처',
-            lastMessage: 'ERD 수정사항 있습니다',
-            lastMessageTime: '오전 11:30',
-            unreadCount: 1,
-            isActive: false,
-            participants: 4,
-            color: '#8B5CF6'
-        },
-        {
-            id: 'project_004',
-            name: '마케팅 전략',
-            description: '홍보 및 마케팅',
-            lastMessage: '런칭 일정 확정했습니다',
-            lastMessageTime: '어제',
-            unreadCount: 0,
-            isActive: true,
-            participants: 6,
-            color: '#F59E0B'
-        }
-    ]);
-
-    // 각 채팅방별 참여자 목록
-    const [roomParticipants] = useState({
-        'project_001': [
-            { id: 'user_001', name: '나', status: 'online', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=32&h=32&fit=crop&crop=face' },
-            { id: 'user_002', name: '김민수', status: 'online', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face' },
-            { id: 'user_003', name: '이지은', status: 'away', avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b2c5?w=32&h=32&fit=crop&crop=face' },
-            { id: 'user_004', name: '박준호', status: 'online', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=32&h=32&fit=crop&crop=face' },
-            { id: 'user_005', name: '최은영', status: 'offline', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=32&h=32&fit=crop&crop=face' }
-        ],
-        'project_002': [
-            { id: 'user_001', name: '나', status: 'online', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=32&h=32&fit=crop&crop=face' },
-            { id: 'user_006', name: '정수진', status: 'online', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=32&h=32&fit=crop&crop=face' },
-            { id: 'user_007', name: '강호영', status: 'away', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=32&h=32&fit=crop&crop=face' }
-        ],
-        'project_003': [
-            { id: 'user_001', name: '나', status: 'online', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=32&h=32&fit=crop&crop=face' },
-            { id: 'user_008', name: '윤서현', status: 'online', avatar: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=32&h=32&fit=crop&crop=face' },
-            { id: 'user_009', name: '임재훈', status: 'offline', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=32&h=32&fit=crop&crop=face' },
-            { id: 'user_010', name: '송미영', status: 'online', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=32&h=32&fit=crop&crop=face' }
-        ],
-        'project_004': [
-            { id: 'user_001', name: '나', status: 'online', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=32&h=32&fit=crop&crop=face' },
-            { id: 'user_011', name: '배현우', status: 'online', avatar: 'https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?w=32&h=32&fit=crop&crop=face' },
-            { id: 'user_012', name: '한지원', status: 'online', avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=32&h=32&fit=crop&crop=face' },
-            { id: 'user_013', name: '류도현', status: 'away', avatar: 'https://images.unsplash.com/photo-1463453091185-61582044d556?w=32&h=32&fit=crop&crop=face' },
-            { id: 'user_014', name: '신예은', status: 'online', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=32&h=32&fit=crop&crop=face' },
-            { id: 'user_015', name: '오민석', status: 'offline', avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=32&h=32&fit=crop&crop=face' }
-        ]
-    });
+    const [currentUser, setCurrentUser] = useState(null);
+    const [userFetchError, setUserFetchError] = useState('');
+    const navigate = useNavigate();
 
     const messagesEndRef = useRef(null);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
+    // 스크롤 핸들러
+    const scrollToBottom = useCallback(() => {
+        messagesEndRef.current?.scrollIntoView({behavior: "smooth"});
+    }, []);
 
     useEffect(() => {
         scrollToBottom();
-    }, [messages, currentChatRoom]);
+    }, [messages, currentChatRoom, scrollToBottom]);
+
+    // 현재 사용자 정보 가져오기
+    useEffect(() => {
+        const fetchCurrentUser = async () => {
+            try {
+                const response = await fetch('/api/users/me');
+                if (response.ok) {
+                    const userData = await response.json();
+                    if (response.redirected && response.url.includes('/login')) {
+                        navigate('/login');
+                        return;
+                    }
+                    console.log(`Fetched current user: ${userData.username} (ID: ${userData.id})`);
+                    setCurrentUser({
+                        id: userData.id,
+                        name: userData.username,
+                        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=40&h=40&fit=crop&crop=face'
+                    });
+                    setUserFetchError('');
+                } else if (response.status === 401) {
+                    setUserFetchError('로그인이 필요합니다. 로그인 페이지로 이동합니다.');
+                    navigate('/login');
+                } else {
+                    const errorText = await response.text();
+                    setUserFetchError(`사용자 정보 로딩 실패 ${response.status}: ${errorText}`);
+                }
+            } catch (error) {
+                setUserFetchError('네트워크 오류로 사용자 정보를 가져올 수 없습니다.');
+                console.error('Network error fetching current user:', error);
+            }
+        };
+        fetchCurrentUser();
+    }, [navigate]);
+
+    // 채팅방 목록 조회
+    useEffect(() => {
+        if (currentUser && currentUser.id) {
+            const fetchChatRooms = async () => {
+                setChatRoomsLoading(true);
+                setChatRoomsError('');
+                try {
+                    const response = await fetch(`/api/chat/my-rooms`);
+                    if (response.ok) {
+                        const roomsData = await response.json();
+                        setChatRooms(roomsData || []);
+                        if (roomsData && roomsData.length > 0) {
+                            const currentRoomExists = roomsData.some(room => room.id === currentChatRoom);
+                            if (!currentChatRoom || !currentRoomExists) {
+                                setCurrentChatRoom(roomsData[0].id);
+                            }
+                        } else {
+                            setCurrentChatRoom(null);
+                        }
+                    } else {
+                        console.error("Failed to fetch chat rooms:", response.status);
+                        setChatRoomsError(`채팅방 목록 로딩 실패 (${response.status})`);
+                    }
+                } catch (error) {
+                    console.error("Error fetching chat rooms:", error);
+                    setChatRoomsError('네트워크 오류로 채팅방 목록을 가져올 수 없습니다.');
+                } finally {
+                    setChatRoomsLoading(false);
+                }
+            };
+            fetchChatRooms();
+        }
+    }, [currentUser, currentChatRoom]);
+
+    // 전체 사용자 목록 조회
+    useEffect(() => {
+        if (currentUser && currentUser.id) {
+            const fetchAllUsers = async () => {
+                setAllUsersLoading(true);
+                setAllUsersError('');
+                try {
+                    const response = await fetch(`/api/users`);
+                    if (response.ok) {
+                        const usersData = await response.json();
+                        const formattedUsers = usersData.map(u => ({
+                            ...u,
+                            avatar: 'https://via.placeholder.com/32/CCCCCC/FFFFFF/?text=' + u.username.charAt(0).toUpperCase()
+                        }));
+                        setAllUsers(formattedUsers);
+                        console.log("Fetched all users:", formattedUsers);
+                    } else {
+                        const errorText = await response.text();
+                        console.error("Failed to fetch all users:", response.status, errorText);
+                        setAllUsersError(`전체 사용자 목록 로딩 실패 (${response.status}): ${errorText}`);
+                    }
+                } catch (error) {
+                    console.error("Error fetching all users:", error);
+                    setAllUsersError('네트워크 오류로 전체 사용자 목록을 가져올 수 없습니다.');
+                } finally {
+                    setAllUsersLoading(false);
+                }
+            };
+            fetchAllUsers();
+        }
+    }, [currentUser]);
+
+    // 특정 채팅방 참여자 목록 조회
+    useEffect(() => {
+        if (currentChatRoom && currentUser && currentUser.id) {
+            const fetchRoomParticipants = async () => {
+                setParticipantsLoading(true);
+                try {
+                    const response = await fetch(`/api/chat/rooms/${currentChatRoom}/participants`);
+                    if (response.ok) {
+                        const participantsData = await response.json();
+                        setRoomParticipants(prev => ({
+                            ...prev,
+                            [currentChatRoom]: participantsData || []
+                        }));
+                    } else {
+                        console.error(`Failed to fetch participants for room ${currentChatRoom}:`, response.status);
+                    }
+                } catch (error) {
+                    console.error(`Error fetching participants for room ${currentChatRoom}:`, error);
+                } finally {
+                    setParticipantsLoading(false);
+                }
+            };
+            fetchRoomParticipants();
+        }
+    }, [currentChatRoom, currentUser]);
+
+    // STOMP 웹소켓 연결
+    useEffect(() => {
+        if (!currentUser || !currentUser.id || !currentChatRoom) {
+            if (stompClientRef.current && stompClientRef.current.active) {
+                stompClientRef.current.deactivate();
+            }
+            setIsConnected(false);
+            return;
+        }
+
+        const selectedRoomObject = chatRooms.find(room => room.id === currentChatRoom);
+        if (!selectedRoomObject) {
+            console.warn(`STOMP: Room data not found in local state for currentChatRoom: ${currentChatRoom}. Connection deferred.`);
+            return;
+        }
+
+        const intRoomIdForSubscription = selectedRoomObject.intId;
+        if (stompClientRef.current && stompClientRef.current.active) {
+            // 방이 변경되었거나 사용자가 변경된 경우 기존 연결 해제 후 새 연결
+            if (stompClientRef.current.roomIdBeforeDeactivation !== currentChatRoom ||
+                stompClientRef.current.userIdBeforeDeactivation !== currentUser.id) {
+                console.log(`Deactivating existing STOMP client for room: ${stompClientRef.current.roomIdBeforeDeactivation} user: ${stompClientRef.current.userIdBeforeDeactivation}`);
+                stompClientRef.current.deactivate();
+            } else {
+                // 이미 올바른 방/사용자로 연결되어 있다면 추가 작업 불필요
+                console.log("STOMP: Already connected to the correct room and user.");
+                if (!isConnected) setIsConnected(true);
+                return;
+            }
+        }
+
+        console.log(`STOMP: Attempting to connect for room ${currentChatRoom} (intId: ${intRoomIdForSubscription}) user ${currentUser.id}`);
+
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const wsHost = window.location.hostname;
+        const wsPort = process.env.REACT_APP_WS_PORT || '9443';
+        const wsEndpoint = process.env.REACT_APP_WS_ENDPOINT || '/ws';
+        const brokerURL = `${wsProtocol}://${wsHost}:${wsPort}${wsEndpoint}`;
+
+        const client = new Client({
+            brokerURL,
+            connectHeaders: {
+                userId: currentUser.id.toString(),
+            },
+            debug: (str) => {
+                console.log(new Date(), 'STOMP DEBUG: ', str);
+            },
+            reconnectDelay: 5000,
+            heartbeatIncoming: 4000,
+            heartbeatOutgoing: 4000,
+            onConnect: (frame) => {
+                setIsConnected(true);
+                stompClientRef.current = client;
+                stompClientRef.current.roomIdBeforeDeactivation = currentChatRoom;
+                stompClientRef.current.userIdBeforeDeactivation = currentUser.id;
+                console.log(`STOMP Connected (room string ID: ${currentChatRoom}, intID: ${intRoomIdForSubscription}) as user: ${currentUser.id}`, frame);
+
+                let subscriptionDestination;
+                if (intRoomIdForSubscription <= PRIVATE_ROOM_MAX_ID_FROM_SERVER) {
+                    subscriptionDestination = `/topic/private/${intRoomIdForSubscription}`;
+                } else {
+                    subscriptionDestination = `/topic/group/${intRoomIdForSubscription}`;
+                }
+
+                client.subscribe(subscriptionDestination, (message) => {
+                    try {
+                        const receivedMsg = JSON.parse(message.body);
+                        console.log(`Message received for room ${currentChatRoom} (subscribed to ${subscriptionDestination}):`, receivedMsg);
+                        const messageToStore = {
+                            id: receivedMsg.messageId || receivedMsg.id || Date.now(),
+                            sender: receivedMsg.username || 'Unknown',
+                            senderId: receivedMsg.senderId,
+                            content: receivedMsg.content,
+                            time: receivedMsg.timestamp ? new Date(receivedMsg.timestamp).toLocaleTimeString('ko-KR', {
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true
+                            }) : new Date().toLocaleTimeString('ko-KR', {
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true
+                            }),
+                            isOwn: receivedMsg.senderId === currentUser.id.toString(),
+                            avatar: receivedMsg.avatar || (receivedMsg.senderId === currentUser.id.toString() ? currentUser.avatar : 'https://via.placeholder.com/40'),
+                        };
+
+                        setMessages(prevMessages => {
+                            const currentRoomMessages = prevMessages[currentChatRoom] || [];
+                            if (currentRoomMessages.find(msg => msg.id === messageToStore.id)) {
+                                return prevMessages;
+                            }
+                            return {
+                                ...prevMessages,
+                                [currentChatRoom]: [...currentRoomMessages, messageToStore]
+                            };
+                        });
+                    } catch (error) {
+                        console.error("Failed to parse STOMP message:", message.body, error);
+                    }
+                });
+
+                console.log(`Subscribed to ${subscriptionDestination}`);
+            },
+            onStompError: (frame) => {
+                console.error('STOMP: Broker reported error: ' + frame.headers['message'], frame.body);
+                setIsConnected(false);
+            },
+            onWebSocketClose: (event) => {
+                console.log('STOMP: WebSocket closed.', event);
+                setIsConnected(false);
+            },
+            onDisconnect: (frame) => {
+                console.log('STOMP: Client disconnected.', frame);
+                setIsConnected(false);
+            }
+        });
+
+        client.activate();
+
+        return () => {
+            if (client && client.active) {
+                console.log(`Deactivating STOMP client for room: ${currentChatRoom} (or ${stompClientRef.current?.roomIdBeforeDeactivation}) user: ${currentUser.id} during cleanup.`);
+                client.deactivate();
+                stompClientRef.current = null;
+            }
+        };
+    }, [currentChatRoom, currentUser, chatRooms]);
 
     const handleSendMessage = () => {
-        if (newMessage.trim()) {
-            const newMsg = {
-                id: Date.now(),
-                sender: currentUser.name,
-                senderId: currentUser.id,
+        const selectedRoom = chatRooms.find(room => room.id === currentChatRoom);
+        if (!selectedRoom) {
+            console.error("Cannot send message, selected room not found in local state:", currentChatRoom);
+            alert("선택된 채팅방 정보를 찾을 수 없습니다.");
+            return;
+        }
+
+        const integerRoomId = selectedRoom.intId;
+        if (newMessage.trim() && currentUser && stompClientRef.current && stompClientRef.current.active) {
+            const messagePayload = {
+                senderId: currentUser.id.toString(),
+                roomId: integerRoomId,
+                username: currentUser.name,
                 content: newMessage.trim(),
-                time: new Date().toLocaleTimeString('ko-KR', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true
-                }),
-                isOwn: true,
-                avatar: currentUser.avatar
+                timestamp: new Date().toISOString(),
             };
 
-            setMessages(prev => ({
-                ...prev,
-                [currentChatRoom]: [...(prev[currentChatRoom] || []), newMsg]
-            }));
+            stompClientRef.current.publish({
+                destination: `/app/chat.sendMessage/${currentChatRoom}`,
+                body: JSON.stringify(messagePayload)
+            });
 
             setNewMessage('');
+        } else {
+            if (!currentUser) {
+                alert('사용자 정보가 로드되지 않았습니다.');
+            } else if (!stompClientRef.current || !stompClientRef.current.active) {
+                alert('채팅 서버에 연결되어 있지 않습니다.');
+            }
         }
     };
 
@@ -187,21 +387,27 @@ const Chat = () => {
     };
 
     const handleRoomChange = (roomId) => {
-        setCurrentChatRoom(roomId);
+        if (roomId !== currentChatRoom) {
+            setMessages(prev => ({...prev, [roomId]: prev[roomId] || []}));
+            setCurrentChatRoom(roomId);
+        }
     };
 
-    const getCurrentRoom = () => {
-        return chatRooms.find(room => room.id === currentChatRoom);
-    };
+    const getCurrentRoom = () => chatRooms.find(room => room.id === currentChatRoom);
 
-    const getCurrentMessages = () => {
-        return messages[currentChatRoom] || [];
-    };
+    const getCurrentMessages = () => messages[currentChatRoom] || [];
 
     const getCurrentParticipants = () => {
-        return roomParticipants[currentChatRoom] || [];
-    };
+        const currentRoomKey = currentChatRoom;
+        const participants = currentRoomKey ? (roomParticipants[currentRoomKey] || []) : [];
 
+        if (currentUser) {
+            return participants.map(p =>
+                p.id === currentUser.id.toString() ? {...p, avatar: currentUser.avatar, name: currentUser.name} : p
+            );
+        }
+        return participants;
+    };
     return (
         <div style={{
             display: 'flex',
@@ -221,7 +427,7 @@ const Chat = () => {
                     padding: '16px',
                     borderBottom: '1px solid #E5E7EB'
                 }}>
-                    <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1F2937', margin: 0 }}>프로젝트 채팅</h2>
+                    <h2 style={{fontSize: '18px', fontWeight: '600', color: '#1F2937', margin: 0}}>프로젝트 채팅</h2>
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -234,7 +440,7 @@ const Chat = () => {
                             marginRight: '8px',
                             backgroundColor: isConnected ? '#10B981' : '#EF4444'
                         }}></div>
-                        <span style={{ fontSize: '12px', color: '#6B7280' }}>
+                        <span style={{fontSize: '12px', color: '#6B7280'}}>
               {isConnected ? '연결됨' : '연결 중...'}
             </span>
                     </div>
@@ -258,7 +464,7 @@ const Chat = () => {
                                 borderLeft: currentChatRoom === room.id ? '4px solid #3B82F6' : 'none'
                             }}
                         >
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                            <div style={{display: 'flex', alignItems: 'flex-start', gap: '12px'}}>
                                 <div style={{
                                     width: '48px',
                                     height: '48px',
@@ -269,10 +475,14 @@ const Chat = () => {
                                     justifyContent: 'center',
                                     flexShrink: 0
                                 }}>
-                                    <Hash style={{ color: 'white' }} />
+                                    <Hash style={{color: 'white'}}/>
                                 </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{flex: 1, minWidth: 0}}>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between'
+                                    }}>
                                         <h3 style={{
                                             fontSize: '14px',
                                             fontWeight: '500',
@@ -311,10 +521,20 @@ const Chat = () => {
                                         textOverflow: 'ellipsis',
                                         whiteSpace: 'nowrap'
                                     }}>{room.lastMessage}</p>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
-                                        <span style={{ fontSize: '11px', color: '#9CA3AF' }}>{room.lastMessageTime}</span>
-                                        <div style={{ display: 'flex', alignItems: 'center', fontSize: '11px', color: '#9CA3AF' }}>
-                                            <Users style={{ width: '12px', height: '12px', marginRight: '4px' }} />
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        marginTop: '8px'
+                                    }}>
+                                        <span style={{fontSize: '11px', color: '#9CA3AF'}}>{room.lastMessageTime}</span>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            fontSize: '11px',
+                                            color: '#9CA3AF'
+                                        }}>
+                                            <Users style={{width: '12px', height: '12px', marginRight: '4px'}}/>
                                             {room.participants}
                                         </div>
                                     </div>
@@ -340,7 +560,7 @@ const Chat = () => {
                     alignItems: 'center',
                     justifyContent: 'space-between'
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
                         <div style={{
                             width: '40px',
                             height: '40px',
@@ -350,15 +570,21 @@ const Chat = () => {
                             alignItems: 'center',
                             justifyContent: 'center'
                         }}>
-                            <Hash style={{ color: 'white' }} />
+                            <Hash style={{color: 'white'}}/>
                         </div>
                         <div>
-                            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1F2937', margin: 0 }}>{getCurrentRoom()?.name}</h3>
-                            <p style={{ fontSize: '14px', color: '#6B7280', margin: 0 }}>{getCurrentParticipants().length}명 참여 중</p>
+                            <h3 style={{
+                                fontSize: '16px',
+                                fontWeight: '600',
+                                color: '#1F2937',
+                                margin: 0
+                            }}>{getCurrentRoom()?.name}</h3>
+                            <p style={{fontSize: '14px', color: '#6B7280', margin: 0}}>{getCurrentParticipants().length}명
+                                참여 중</p>
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
                         <button
                             onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
                             style={{
@@ -370,7 +596,7 @@ const Chat = () => {
                             }}
                             title={isRightSidebarOpen ? "참여자 목록 숨기기" : "참여자 목록 보기"}
                         >
-                            <Users style={{ color: '#6B7280' }} />
+                            <Users style={{color: '#6B7280'}}/>
                         </button>
                         <button style={{
                             padding: '8px',
@@ -379,7 +605,7 @@ const Chat = () => {
                             cursor: 'pointer',
                             backgroundColor: 'transparent'
                         }}>
-                            <MoreVertical style={{ color: '#6B7280' }} />
+                            <MoreVertical style={{color: '#6B7280'}}/>
                         </button>
                     </div>
                 </div>
@@ -410,11 +636,15 @@ const Chat = () => {
                                 justifyContent: 'center',
                                 marginBottom: '16px'
                             }}>
-                                <Hash style={{ color: 'white', width: '32px', height: '32px' }} />
+                                <Hash style={{color: 'white', width: '32px', height: '32px'}}/>
                             </div>
-                            <h3 style={{ fontSize: '18px', fontWeight: '500', marginBottom: '8px' }}>{getCurrentRoom()?.name}</h3>
-                            <p style={{ fontSize: '14px', textAlign: 'center', lineHeight: '1.5' }}>
-                                {getCurrentRoom()?.description}<br />
+                            <h3 style={{
+                                fontSize: '18px',
+                                fontWeight: '500',
+                                marginBottom: '8px'
+                            }}>{getCurrentRoom()?.name}</h3>
+                            <p style={{fontSize: '14px', textAlign: 'center', lineHeight: '1.5'}}>
+                                {getCurrentRoom()?.description}<br/>
                                 팀원들과 소통을 시작해보세요.
                             </p>
                         </div>
@@ -437,7 +667,7 @@ const Chat = () => {
                                         <img
                                             src={message.avatar}
                                             alt={message.sender}
-                                            style={{ width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0 }}
+                                            style={{width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0}}
                                         />
                                         <div style={{
                                             display: 'flex',
@@ -458,7 +688,11 @@ const Chat = () => {
                                                 backgroundColor: message.isOwn ? '#3B82F6' : '#E5E7EB',
                                                 color: message.isOwn ? 'white' : '#1F2937'
                                             }}>
-                                                <p style={{ fontSize: '14px', lineHeight: '1.5', margin: 0 }}>{message.content}</p>
+                                                <p style={{
+                                                    fontSize: '14px',
+                                                    lineHeight: '1.5',
+                                                    margin: 0
+                                                }}>{message.content}</p>
                                             </div>
                                             <span style={{
                                                 fontSize: '11px',
@@ -472,7 +706,7 @@ const Chat = () => {
                             ))}
                         </div>
                     )}
-                    <div ref={messagesEndRef} />
+                    <div ref={messagesEndRef}/>
                 </div>
 
                 {/* 메시지 입력 영역 */}
@@ -513,7 +747,7 @@ const Chat = () => {
                             cursor: 'pointer',
                             backgroundColor: 'transparent'
                         }}>
-                            <Smile style={{ color: '#6B7280' }} />
+                            <Smile style={{color: '#6B7280'}}/>
                         </button>
 
                         <button
@@ -528,7 +762,7 @@ const Chat = () => {
                                 color: !newMessage.trim() ? '#6B7280' : 'white'
                             }}
                         >
-                            <Send style={{ color: 'inherit' }} />
+                            <Send style={{color: 'inherit'}}/>
                         </button>
                     </div>
                 </div>
@@ -551,8 +785,12 @@ const Chat = () => {
                         justifyContent: 'space-between'
                     }}>
                         <div>
-                            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1F2937', margin: 0 }}>참여자</h3>
-                            <p style={{ fontSize: '14px', color: '#6B7280', margin: 0 }}>{getCurrentParticipants().length}명</p>
+                            <h3 style={{fontSize: '16px', fontWeight: '600', color: '#1F2937', margin: 0}}>참여자</h3>
+                            <p style={{
+                                fontSize: '14px',
+                                color: '#6B7280',
+                                margin: 0
+                            }}>{getCurrentParticipants().length}명</p>
                         </div>
                         <button
                             onClick={() => setIsRightSidebarOpen(false)}
@@ -565,7 +803,7 @@ const Chat = () => {
                             }}
                             title="참여자 목록 닫기"
                         >
-                            <ChevronRight style={{ color: '#6B7280' }} />
+                            <ChevronRight style={{color: '#6B7280'}}/>
                         </button>
                     </div>
 
@@ -574,7 +812,7 @@ const Chat = () => {
                         overflowY: 'auto',
                         padding: '16px'
                     }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
                             {getCurrentParticipants().map((user) => (
                                 <div key={user.id} style={{
                                     display: 'flex',
@@ -583,8 +821,9 @@ const Chat = () => {
                                     padding: '8px',
                                     borderRadius: '8px'
                                 }}>
-                                    <div style={{ position: 'relative' }}>
-                                        <img src={user.avatar} alt={user.name} style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
+                                    <div style={{position: 'relative'}}>
+                                        <img src={user.avatar} alt={user.name}
+                                             style={{width: '32px', height: '32px', borderRadius: '50%'}}/>
                                         <div style={{
                                             position: 'absolute',
                                             bottom: '-2px',
@@ -596,9 +835,14 @@ const Chat = () => {
                                             backgroundColor: user.status === 'online' ? '#10B981' : user.status === 'away' ? '#F59E0B' : '#6B7280'
                                         }}></div>
                                     </div>
-                                    <div style={{ flex: 1 }}>
-                                        <p style={{ fontSize: '14px', fontWeight: '500', color: '#1F2937', margin: 0 }}>{user.name}</p>
-                                        <p style={{ fontSize: '12px', color: '#6B7280', margin: 0 }}>
+                                    <div style={{flex: 1}}>
+                                        <p style={{
+                                            fontSize: '14px',
+                                            fontWeight: '500',
+                                            color: '#1F2937',
+                                            margin: 0
+                                        }}>{user.name}</p>
+                                        <p style={{fontSize: '12px', color: '#6B7280', margin: 0}}>
                                             {user.status === 'online' ? '온라인' :
                                                 user.status === 'away' ? '자리비움' : '오프라인'}
                                         </p>
@@ -632,7 +876,7 @@ const Chat = () => {
                         }}
                         title="참여자 목록 열기"
                     >
-                        <ChevronLeft style={{ color: '#6B7280' }} />
+                        <ChevronLeft style={{color: '#6B7280'}}/>
                     </button>
                     <div style={{
                         marginTop: '8px',

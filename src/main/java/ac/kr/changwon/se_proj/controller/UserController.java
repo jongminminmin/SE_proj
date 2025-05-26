@@ -68,7 +68,7 @@ public class UserController {
     }
 
     //전체 사용자 목록 반환
-    @GetMapping
+    @GetMapping("/api/chat/")
     public ResponseEntity<List<UserDto>> listAllUsers() {
         logger.info("/api/users (전체 목록) 호출됨");
         List<UserDto> users = userService.findAll()

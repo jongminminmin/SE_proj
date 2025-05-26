@@ -5,21 +5,28 @@ import ac.kr.changwon.se_proj.dto.FindPasswordRequestDto;
 import ac.kr.changwon.se_proj.dto.LoginRequestDTO;
 import ac.kr.changwon.se_proj.dto.UserDto;
 import ac.kr.changwon.se_proj.service.Interface.AuthService;
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.HashMap;
 import java.util.Map;
+
 ;
 
 /* 로그인 컨트롤러
@@ -29,6 +36,7 @@ import java.util.Map;
 public class AuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+
     private final AuthService authService;
 
     private final AuthenticationManager authenticationManager;
@@ -39,68 +47,104 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String,Object>> login(@RequestBody LoginRequestDTO req) {
+    public ResponseEntity<Map<String,Object>> login(@RequestBody LoginRequestDTO reqDto, HttpServletRequest request) { // HttpServletRequest 파라미터 추가
         Map<String, Object> response = new HashMap<>();
-        String userId = req.getUserId();
-        String password = req.getPassword();
+        String userId = reqDto.getUserId();
+        String password = reqDto.getPassword();
+
+        // 디버깅 로그 추가
+        logger.debug("Login attempt for userId: {}", userId);
 
         if (userId == null || userId.isBlank() ||
                 password == null || password.isBlank()) {
+            logger.warn("Login attempt with missing credentials for userId: {}", userId);
             response.put("success", false);
             response.put("message", "userId와 password는 필수 입력입니다.");
             return ResponseEntity.badRequest().body(response);
         }
 
+        logger.info("/api/auth/login 호출됨 요청 DTO: {}", reqDto);
+
         try {
-            // AuthService의 login 메소드가 성공 시 true를 반환하거나,
-            // 실패 시 BadCredentialsException 또는 UsernameNotFoundException을 던진다고 가정합니다.
-            // (AuthServiceImpl의 login 메소드는 이 가정에 맞게 수정되어야 합니다.)
-            authService.login(userId, password);
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            reqDto.getUserId(),
+                            reqDto.getPassword()
+                    )
+            );
+            logger.info("AuthenticationManager.authenticate() 성공. 인증 객체: {}", authentication);
 
-            response.put("success", true);
-            response.put("message", "Login successful");
-            return ResponseEntity.ok(response);
+            // SecurityContext에 인증 정보 설정
+            SecurityContext context = SecurityContextHolder.createEmptyContext(); // 새 SecurityContext 생성
+            context.setAuthentication(authentication); // 인증 정보 설정
+            SecurityContextHolder.setContext(context); // SecurityContextHolder에 설정
 
-        } catch (UsernameNotFoundException e) {
-            logger.warn("Login failed for user {}: {}", userId, e.getMessage());
-            response.put("success", false);
-            response.put("message", e.getMessage()); // 서비스에서 던진 메시지 사용
-            return ResponseEntity.ok(response); // 테스트는 실패 시에도 200 OK와 JSON을 기대
+            // HttpSession에 SecurityContext 명시적으로 저장 (HttpSessionSecurityContextRepository가 처리하도록 위임 가능)
+            // SecurityConfig에 HttpSessionSecurityContextRepository가 이미 설정되어 있으므로,
+            // SecurityContextHolder에 컨텍스트를 설정하는 것만으로도 세션에 저장되어야 함.
+            // 다만, 명시적으로 세션을 가져와서 저장하는 것도 한 방법입니다.
+            HttpSession session = request.getSession(true); // true: 세션이 없으면 새로 생성
+            session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
+            logger.info("SecurityContext가 HttpSession에 저장됨. Session ID: {}", session.getId());
+
+
+            // 로그인 성공 응답
+            Map<String, Object> responseBody = new HashMap<>();
+            responseBody.put("success", true);
+            responseBody.put("message", "Login successful");
+            // 필요하다면 여기에 사용자 정보 일부를 포함할 수 있으나,
+            // 보통은 /api/users/me 와 같은 별도 엔드포인트에서 가져옵니다.
+            return ResponseEntity.ok(responseBody);
+
         } catch (BadCredentialsException e) {
-            logger.warn("Login failed for user {}: {}", userId, e.getMessage());
-            response.put("success", false);
-            response.put("message", e.getMessage()); // 서비스에서 던진 메시지 사용 ("비밀번호 불일치")
-            return ResponseEntity.ok(response); // 테스트는 실패 시에도 200 OK와 JSON을 기대
-        } catch (Exception e) { // 그 외 예기치 않은 오류
-            logger.error("Unexpected error during login for user {}: {}", userId, e.getMessage(), e);
-            response.put("success", false);
-            response.put("message", "로그인 중 내부 오류가 발생했습니다.");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            logger.warn("로그인 실패 (잘못된 자격 증명): {}", reqDto.getUserId(), e);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("success", false, "message", "아이디 또는 비밀번호가 잘못되었습니다."));
+        } catch (AuthenticationException e) {
+            logger.error("로그인 중 인증 오류 발생: {}", reqDto.getUserId(), e);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("success", false, "message", "인증 중 오류가 발생했습니다."));
+        } catch (Exception e) {
+            logger.error("로그인 중 알 수 없는 오류 발생: {}", reqDto.getUserId(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "로그인 중 알 수 없는 오류가 발생했습니다."));
         }
-
     }
 
 
     @PostMapping("/register")
-    public String register(UserDto dto, RedirectAttributes redirectAttributes, Model model) {
-        boolean ok = authService.register(
-                dto.getId(),
-                dto.getUsername(),
-                dto.getPassword(),
-                dto.getEmail()
-        );
+    public ResponseEntity<Map<String, Object>> register(@Valid @RequestBody UserDto dto) {
+        try{
+            boolean ok = authService.register(
+                    dto.getId(),
+                    dto.getUsername(),
+                    dto.getPassword(),
+                    dto.getEmail()
+            );
 
-        if(!ok){
-            // 회원가입 실패 시, 오류 메시지를 모델에 담아 다시 회원가입 페이지로 이동
-            // RedirectAttributes를 사용하면 리다이렉트 후에도 값을 사용할 수 있습니다 (Flash Attribute).
-            redirectAttributes.addFlashAttribute("registrationError", "이미 존재하는 아이디이거나 회원가입에 실패했습니다. 다시 시도해주세요.");
-            return "redirect:/register"; // GET /api/auth/register 로 리다이렉트 (위의 showRegisterPage 메소드 호출)
-            // 또는 직접 뷰 이름 "register" 반환 (이 경우 URL은 POST /api/auth/register 유지)
-            // "redirect:/register.html" 또는 "redirect:/register" (SecurityConfig의 permitAll 경로에 따라)
+            if(ok){
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "message", "회원가입이 성공적으로 완료되었습니다. 로그인해주세요."
+                ));
+            }
+            else{
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(Map.of(
+                                "success", false,
+                                "message", "이미 존재하는 아이디 또는 이메일 입니다."
+                        ));
+            }
         }
-        // 회원가입 성공 시, 성공 메시지와 함께 로그인 페이지로 리다이렉션
-        redirectAttributes.addFlashAttribute("registrationSuccess", "회원가입이 성공적으로 완료되었습니다. 로그인해주세요.");
-        return "redirect:/login"; // 로그인 페이지 경로 (예: /login.html 또는 SecurityConfig에 설정된 /login)
+        catch (Exception e){
+            // 기타 예상치 못한 예외 발생 시 (로깅 권장)
+            // logger.error("Registration failed for user DTO: {}", dto, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "success", false,
+                            "message", "서버 오류로 회원가입에 실패했습니다: " + e.getMessage()
+                    ));
+        }
     }
 
 

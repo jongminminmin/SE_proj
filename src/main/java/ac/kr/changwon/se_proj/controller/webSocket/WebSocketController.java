@@ -9,6 +9,7 @@ import ac.kr.changwon.se_proj.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
@@ -34,10 +35,11 @@ public class WebSocketController {
     /**
      * WebSocket 메시지 수신 처리
      */
-    @MessageMapping("/chat.sendMessage")
-    public void sendMessage(@Payload ChatMessageDTO message, Principal principal) {
-        log.info("Received message in sendMessage: {}, Principal: {}",
-                (message != null ? "Content: " + message.getContent() + ", RoomId: " + message.getRoomId() + ", DTO_User: " + message.getUsername() : "null_message"),
+    @MessageMapping("/chat.sendMessage/{roomIdString}")
+    public void sendMessage(@Payload ChatMessageDTO message, @DestinationVariable String roomIdString, Principal principal) {
+        log.info("Received message in sendMessage for room PathVariable: {}, DTO_RoomID: {}, Principal: {}",
+                roomIdString, // 경로에서 추출한 방 ID (예: "project_001")
+                (message != null ? message.getRoomId() : "null_DTO_roomId"), // DTO에 포함된 방 ID (int 타입이어야 함)
                 (principal != null ? principal.getName() : "null_principal"));
 
         int privateRoomMaxId = chatProps.getPrivateMaxRoomId();

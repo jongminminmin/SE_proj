@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@stomp/stompjs": "^7.1.1",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
@@ -11,8 +12,9 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router": "^7.6.0",
-    "react-router-dom": "^7.6.0",
+    "react-router-dom": "^7.6.1",
     "react-scripts": "^5.0.1",
+    "sockjs-client": "^1.6.1",
     "web-vitals": "^2.1.4"
   },
   "config": {
@@ -50,7 +52,9 @@
     "autoprefixer": "^10.4.21",
     "cpx": "^1.2.1",
     "cross-env": "^7.0.3",
+    "npm-run-all": "^4.1.5",
     "postcss": "^8.5.3",
+    "react-script": "^2.0.5",
     "rimraf": "^6.0.1",
     "shx": "^0.4.0",
     "tailwindcss": "^4.1.7"

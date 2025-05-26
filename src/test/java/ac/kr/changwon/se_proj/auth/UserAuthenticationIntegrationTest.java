@@ -74,24 +74,18 @@ public class UserAuthenticationIntegrationTest {
     @Test
     @DisplayName("회원가입 성공 및 해당 정보로 로그인 성공 통합 테스트")
     void testRegistrationAndLogin() throws Exception{
-        //1.회원가입 요청
-        MultiValueMap<String, String> registrationParams = new LinkedMultiValueMap<>();
-        registrationParams.add("id", testUserDto.getId());
-        registrationParams.add("username", testUserDto.getUsername());
-        registrationParams.add("password", testUserDto.getPassword());
-        registrationParams.add("email", testUserDto.getEmail());
-
+        // 1. 회원가입 요청 (JSON으로 변경)
         mockMvc.perform(post("/api/auth/register")
                         .with(csrf())
-                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                        .params(registrationParams))
+                        .contentType(MediaType.APPLICATION_JSON) // Content-Type을 JSON으로 설정
+                        .content(objectMapper.writeValueAsString(testUserDto))) // testUserDto를 JSON 문자열로 변환하여 본문에 포함
                 .andDo(print())
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login"))
-                .andExpect(flash().attribute("registrationSuccess", "회원가입이 성공적으로 완료되었습니다. 로그인해주세요."));
+                .andExpect(status().isOk()) // AuthController.register가 성공 시 200 OK와 JSON을 반환한다고 가정
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("회원가입이 성공적으로 완료되었습니다. 로그인해주세요."));
 
-
-        // 2. DB에서 사용자 확인 (선택 사항)
+        // 2. DB에서 사용자 확인 (선택 사항, 이전과 동일)
         Optional<User> registeredUserOpt = userRepository.findById(testUserDto.getId());
         assertTrue(registeredUserOpt.isPresent(), "회원가입 후 DB에서 사용자를 찾을 수 있어야 합니다.");
         User registeredUser = registeredUserOpt.get();
@@ -100,7 +94,10 @@ public class UserAuthenticationIntegrationTest {
         assertEquals("ROLE_USER", registeredUser.getRole(), "기본 역할은 ROLE_USER여야 합니다.");
 
 
-        // 3. 일반 로그인 요청 (방금 가입한 정보로)
+
+        loginRequestDTO.setUserId(testUserDto.getId()); // loginRequestDTO의 ID를 방금 가입한 사용자로 설정
+        loginRequestDTO.setPassword(testUserDto.getPassword()); // loginRequestDTO의 PW를 방금 가입한 사용자로 설정
+
         mockMvc.perform(post("/api/auth/login")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -161,25 +158,29 @@ public class UserAuthenticationIntegrationTest {
     @Test
     @DisplayName("이미 존재하는 ID로 회원가입 시도 시 실패 테스트")
     void testRegistrationWithExistingId() throws Exception {
-        // 1. 테스트 사용자 먼저 회원가입
+        // 1. 테스트 사용자 먼저 회원가입 (이 부분은 실제 DB에 저장하는 방식이므로 그대로 두거나,
+        //    API를 통해 가입시키는 방식으로 변경할 수도 있지만, 여기서는 userRepository를 직접 사용)
         User userToRegister = new User(testUserDto.getId(), "Original Name", passwordEncoder.encode(testUserDto.getPassword()), testUserDto.getEmail(), "ROLE_USER");
         userRepository.save(userToRegister);
 
-        // 2. 동일한 ID로 다시 회원가입 시도
-        MultiValueMap<String, String> duplicateRegistrationParams = new LinkedMultiValueMap<>();
-        duplicateRegistrationParams.add("id", testUserDto.getId()); // 중복 ID
-        duplicateRegistrationParams.add("username", "Another Name");
-        duplicateRegistrationParams.add("password", "anotherpassword");
-        duplicateRegistrationParams.add("email", "another@example.com");
+        // 2. 동일한 ID로 다시 회원가입 시도 (JSON 요청으로 변경)
+        // 중복 가입 시도에 사용할 DTO (기존 testUserDto 사용)
+        UserDto duplicateUserDto = new UserDto(
+                testUserDto.getId(), // 중복 ID
+                "Another Name",
+                "anotherpassword",
+                "another@example.com"
+        );
 
         mockMvc.perform(post("/api/auth/register")
                         .with(csrf())
-                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                        .params(duplicateRegistrationParams))
+                        .contentType(MediaType.APPLICATION_JSON) // Content-Type을 JSON으로 설정
+                        .content(objectMapper.writeValueAsString(duplicateUserDto))) // duplicateUserDto를 JSON으로
                 .andDo(print())
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/register")) // 실패 시 /register로 리다이렉션
-                .andExpect(flash().attribute("registrationError", "이미 존재하는 아이디이거나 회원가입에 실패했습니다. 다시 시도해주세요."));
+                .andExpect(status().isConflict()) // AuthController.register가 중복 시 409 Conflict 반환 가정
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("이미 존재하는 아이디 또는 이메일 입니다.")); // 컨트롤러 반환 메시지에 따라
     }
 
     @Test

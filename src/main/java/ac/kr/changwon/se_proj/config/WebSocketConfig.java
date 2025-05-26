@@ -22,7 +22,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.enableSimpleBroker("/topic"); // 수신자별 구독
+        config.enableSimpleBroker("/topic","/queue"); // 수신자별 구독
         config.setApplicationDestinationPrefixes("/app");
     }
 
@@ -49,5 +49,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
             }
         });
     }
+
 
 }

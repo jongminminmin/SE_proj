@@ -49,3 +49,6 @@ out/
 
 /src/main/resources/application.properties
 /src/main/resources/keystore.jks
+/frontEnd/package-lock.json
+/frontEnd/package.json
+/frontEnd/node_modules

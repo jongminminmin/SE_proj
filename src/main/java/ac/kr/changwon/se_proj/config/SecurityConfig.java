@@ -13,13 +13,13 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 
 
 /* 스프링 자체에서 제공하는 보안 관련 컨픽 클래스*/
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
-@Profile("!test")
 public class SecurityConfig {
 
     private final CustomOAuth2UserService customOAuth2UserService;
@@ -32,6 +32,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .securityContext(context -> context
+                        .securityContextRepository(new HttpSessionSecurityContextRepository()))
                 // .requiresChannel(channel -> channel.anyRequest().requiresSecure()) // HTTPS 강제는 필요시 프로덕션 환경에서 웹서버/로드밸런서 레벨에서 처리 권장
                 .authorizeHttpRequests(auth -> auth
                         // React App 정적 리소스 및 기본 경로 허용
@@ -58,7 +60,7 @@ public class SecurityConfig {
                         ).permitAll()
                         // 특정 페이지 경로 (이들은 React 라우트가 되므로, GET 요청은 index.html로 연결되어 permitAll 효과)
                         // 만약 이 경로들 하위에 특정 API가 있고, 그 API를 permitAll 해야 한다면 명시적으로 추가
-                        .requestMatchers("/main", "/login", "/register", "/chat/**", "/ws/**", "/api/chat/**").permitAll() // 기존 permitAll 유지
+                        .requestMatchers("/main", "/login", "/register", "/chat/**", "/ws/**","/wss/**","/api/chat/**").permitAll() // 기존 permitAll 유지
                         // 그 외 모든 API 요청은 인증 필요
                         .requestMatchers("/api/**").authenticated()
                         // 나머지 모든 요청은 인증 필요 (위에서 permitAll 되지 않은 경우)
