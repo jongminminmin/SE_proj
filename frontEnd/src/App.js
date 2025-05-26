@@ -5,6 +5,7 @@ import FindAccount from './pages/FindAccount';
 import Register from './pages/Register';
 import Main from './pages/Main';
 import Task from './pages/Task';
+import Chat from './pages/Chat';
 import {Route, Routes} from 'react-router-dom';
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/main" element={<Main />} />
         <Route path="/task" element={<Task />} />
+        <Route path="/chat" element={<Chat />} />
       </Routes>
     </div>
   );

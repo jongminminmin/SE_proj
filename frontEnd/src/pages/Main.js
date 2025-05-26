@@ -97,7 +97,7 @@ function Main() {
                   </li>
                 </ul>
             )}
-            <li className={styles.sidebarMenuItem} onClick={() => alert('채팅 페이지로 이동합니다.')}>
+            <li className={styles.sidebarMenuItem} onClick={() => navigate('/chat')}>
               <span role="img" aria-label="chat" className={styles.icon}>💬</span> Chat
             </li>
             <li className={styles.sidebarMenuItem}>
