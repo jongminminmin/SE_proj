@@ -1,32 +1,33 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Client } from '@stomp/stompjs';
 import { useNavigate } from "react-router-dom";
+import './Chat.css';
 
 // SVG 아이콘 컴포넌트들
-const Send = ({ style }) => (
-    <svg style={{ width: '20px', height: '20px', ...style }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+const Send = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
     </svg>
 );
 
-const Smile = ({ style }) => (
-    <svg style={{ width: '20px', height: '20px', ...style }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+const Smile = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="10"/>
         <path d="m9 9 6 0"/>
         <path d="m9 15 6 0"/>
     </svg>
 );
 
-const MoreVertical = ({ style }) => (
-    <svg style={{ width: '20px', height: '20px', ...style }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+const MoreVertical = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="1"/>
         <circle cx="12" cy="5" r="1"/>
         <circle cx="12" cy="19" r="1"/>
     </svg>
 );
 
-const Hash = ({ style }) => (
-    <svg style={{ width: '24px', height: '24px', ...style }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+const Hash = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <line x1="4" y1="9" x2="20" y2="9"/>
         <line x1="4" y1="15" x2="20" y2="15"/>
         <line x1="10" y1="3" x2="8" y2="21"/>
@@ -34,8 +35,8 @@ const Hash = ({ style }) => (
     </svg>
 );
 
-const Users = ({ style }) => (
-    <svg style={{ width: '20px', height: '20px', ...style }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+const Users = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
         <circle cx="9" cy="7" r="4"/>
         <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
@@ -43,14 +44,14 @@ const Users = ({ style }) => (
     </svg>
 );
 
-const ChevronLeft = ({ style }) => (
-    <svg style={{ width: '16px', height: '16px', ...style }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+const ChevronLeft = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
     </svg>
 );
 
-const ChevronRight = ({ style }) => (
-    <svg style={{ width: '16px', height: '16px', ...style }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+const ChevronRight = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
     </svg>
 );
@@ -408,133 +409,47 @@ const Chat = () => {
         }
         return participants;
     };
+
     return (
-        <div style={{
-            display: 'flex',
-            height: '100vh',
-            backgroundColor: '#F9FAFB',
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
-        }}>
+        <div className="chat-container">
             {/* 왼쪽 사이드바 - 채팅방 목록 */}
-            <div style={{
-                width: '320px',
-                backgroundColor: 'white',
-                borderRight: '1px solid #E5E7EB',
-                display: 'flex',
-                flexDirection: 'column'
-            }}>
-                <div style={{
-                    padding: '16px',
-                    borderBottom: '1px solid #E5E7EB'
-                }}>
-                    <h2 style={{fontSize: '18px', fontWeight: '600', color: '#1F2937', margin: 0}}>프로젝트 채팅</h2>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        marginTop: '8px'
-                    }}>
-                        <div style={{
-                            width: '8px',
-                            height: '8px',
-                            borderRadius: '50%',
-                            marginRight: '8px',
-                            backgroundColor: isConnected ? '#10B981' : '#EF4444'
-                        }}></div>
-                        <span style={{fontSize: '12px', color: '#6B7280'}}>
-              {isConnected ? '연결됨' : '연결 중...'}
-            </span>
+            <div className="left-sidebar">
+                <div className="sidebar-header">
+                    <h2 className="sidebar-title">프로젝트 채팅</h2>
+                    <div className="connection-status">
+                        <div className={`status-indicator ${isConnected ? 'connected' : 'disconnected'}`}></div>
+                        <span className="status-text">
+                            {isConnected ? '연결됨' : '연결 중...'}
+                        </span>
                     </div>
                 </div>
 
-                <div style={{
-                    flex: 1,
-                    overflowY: 'auto',
-                    padding: '8px'
-                }}>
+                <div className="rooms-list">
                     {chatRooms.map((room) => (
                         <div
                             key={room.id}
                             onClick={() => handleRoomChange(room.id)}
-                            style={{
-                                padding: '12px',
-                                borderRadius: '8px',
-                                marginBottom: '8px',
-                                cursor: 'pointer',
-                                backgroundColor: currentChatRoom === room.id ? '#EFF6FF' : 'transparent',
-                                borderLeft: currentChatRoom === room.id ? '4px solid #3B82F6' : 'none'
-                            }}
+                            className={`room-item ${currentChatRoom === room.id ? 'active' : ''}`}
                         >
-                            <div style={{display: 'flex', alignItems: 'flex-start', gap: '12px'}}>
-                                <div style={{
-                                    width: '48px',
-                                    height: '48px',
-                                    backgroundColor: room.color,
-                                    borderRadius: '8px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flexShrink: 0
-                                }}>
-                                    <Hash style={{color: 'white'}}/>
+                            <div className="room-content">
+                                <div className="room-avatar" style={{backgroundColor: room.color}}>
+                                    <Hash className="room-icon"/>
                                 </div>
-                                <div style={{flex: 1, minWidth: 0}}>
-                                    <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between'
-                                    }}>
-                                        <h3 style={{
-                                            fontSize: '14px',
-                                            fontWeight: '500',
-                                            color: '#1F2937',
-                                            margin: 0,
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap'
-                                        }}>{room.name}</h3>
+                                <div className="room-info">
+                                    <div className="room-header">
+                                        <h3 className="room-name">{room.name}</h3>
                                         {room.unreadCount > 0 && (
-                                            <span style={{
-                                                backgroundColor: '#EF4444',
-                                                color: 'white',
-                                                fontSize: '11px',
-                                                borderRadius: '12px',
-                                                padding: '2px 8px',
-                                                marginLeft: '8px'
-                                            }}>
-                        {room.unreadCount}
-                      </span>
+                                            <span className="unread-badge">
+                                                {room.unreadCount}
+                                            </span>
                                         )}
                                     </div>
-                                    <p style={{
-                                        fontSize: '12px',
-                                        color: '#6B7280',
-                                        margin: '4px 0',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap'
-                                    }}>{room.description}</p>
-                                    <p style={{
-                                        fontSize: '12px',
-                                        color: '#9CA3AF',
-                                        margin: '4px 0',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap'
-                                    }}>{room.lastMessage}</p>
-                                    <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        marginTop: '8px'
-                                    }}>
-                                        <span style={{fontSize: '11px', color: '#9CA3AF'}}>{room.lastMessageTime}</span>
-                                        <div style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            fontSize: '11px',
-                                            color: '#9CA3AF'
-                                        }}>
-                                            <Users style={{width: '12px', height: '12px', marginRight: '4px'}}/>
+                                    <p className="room-description">{room.description}</p>
+                                    <p className="room-last-message">{room.lastMessage}</p>
+                                    <div className="room-footer">
+                                        <span className="last-message-time">{room.lastMessageTime}</span>
+                                        <div className="participants-count">
+                                            <Users className="participants-icon"/>
                                             {room.participants}
                                         </div>
                                     </div>
@@ -546,160 +461,66 @@ const Chat = () => {
             </div>
 
             {/* 메인 채팅 영역 */}
-            <div style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column'
-            }}>
+            <div className="main-chat">
                 {/* 채팅 헤더 */}
-                <div style={{
-                    backgroundColor: 'white',
-                    borderBottom: '1px solid #E5E7EB',
-                    padding: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                }}>
-                    <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
-                        <div style={{
-                            width: '40px',
-                            height: '40px',
-                            backgroundColor: getCurrentRoom()?.color,
-                            borderRadius: '8px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}>
-                            <Hash style={{color: 'white'}}/>
+                <div className="chat-header">
+                    <div className="header-left">
+                        <div className="current-room-avatar" style={{backgroundColor: getCurrentRoom()?.color}}>
+                            <Hash className="room-icon"/>
                         </div>
-                        <div>
-                            <h3 style={{
-                                fontSize: '16px',
-                                fontWeight: '600',
-                                color: '#1F2937',
-                                margin: 0
-                            }}>{getCurrentRoom()?.name}</h3>
-                            <p style={{fontSize: '14px', color: '#6B7280', margin: 0}}>{getCurrentParticipants().length}명
-                                참여 중</p>
+                        <div className="current-room-info">
+                            <h3 className="current-room-name">{getCurrentRoom()?.name}</h3>
+                            <p className="current-room-participants">{getCurrentParticipants().length}명 참여 중</p>
                         </div>
                     </div>
 
-                    <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                    <div className="header-actions">
                         <button
                             onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
-                            style={{
-                                padding: '8px',
-                                borderRadius: '50%',
-                                border: 'none',
-                                cursor: 'pointer',
-                                backgroundColor: 'transparent'
-                            }}
+                            className="action-button"
                             title={isRightSidebarOpen ? "참여자 목록 숨기기" : "참여자 목록 보기"}
                         >
-                            <Users style={{color: '#6B7280'}}/>
+                            <Users className="action-icon"/>
                         </button>
-                        <button style={{
-                            padding: '8px',
-                            borderRadius: '50%',
-                            border: 'none',
-                            cursor: 'pointer',
-                            backgroundColor: 'transparent'
-                        }}>
-                            <MoreVertical style={{color: '#6B7280'}}/>
+                        <button className="action-button">
+                            <MoreVertical className="action-icon"/>
                         </button>
                     </div>
                 </div>
 
                 {/* 메시지 영역 */}
-                <div style={{
-                    flex: 1,
-                    overflowY: 'auto',
-                    padding: '16px'
-                }}>
+                <div className="messages-container">
                     {getCurrentMessages().length === 0 ? (
                         // 빈 채팅방 상태
-                        <div style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            height: '100%',
-                            color: '#6B7280'
-                        }}>
-                            <div style={{
-                                width: '64px',
-                                height: '64px',
-                                backgroundColor: getCurrentRoom()?.color,
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                marginBottom: '16px'
-                            }}>
-                                <Hash style={{color: 'white', width: '32px', height: '32px'}}/>
+                        <div className="empty-chat">
+                            <div className="empty-chat-avatar" style={{backgroundColor: getCurrentRoom()?.color}}>
+                                <Hash className="empty-chat-icon"/>
                             </div>
-                            <h3 style={{
-                                fontSize: '18px',
-                                fontWeight: '500',
-                                marginBottom: '8px'
-                            }}>{getCurrentRoom()?.name}</h3>
-                            <p style={{fontSize: '14px', textAlign: 'center', lineHeight: '1.5'}}>
+                            <h3 className="empty-chat-title">{getCurrentRoom()?.name}</h3>
+                            <p className="empty-chat-description">
                                 {getCurrentRoom()?.description}<br/>
                                 팀원들과 소통을 시작해보세요.
                             </p>
                         </div>
                     ) : (
                         // 메시지 목록
-                        <div>
+                        <div className="messages-list">
                             {getCurrentMessages().map((message) => (
-                                <div key={message.id} style={{
-                                    display: 'flex',
-                                    justifyContent: message.isOwn ? 'flex-end' : 'flex-start',
-                                    marginBottom: '16px'
-                                }}>
-                                    <div style={{
-                                        display: 'flex',
-                                        alignItems: 'flex-end',
-                                        gap: '8px',
-                                        flexDirection: message.isOwn ? 'row-reverse' : 'row',
-                                        maxWidth: '70%'
-                                    }}>
+                                <div key={message.id} className={`message ${message.isOwn ? 'own' : 'other'}`}>
+                                    <div className="message-content">
                                         <img
                                             src={message.avatar}
                                             alt={message.sender}
-                                            style={{width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0}}
+                                            className="message-avatar"
                                         />
-                                        <div style={{
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            alignItems: message.isOwn ? 'flex-end' : 'flex-start'
-                                        }}>
+                                        <div className="message-body">
                                             {!message.isOwn && (
-                                                <span style={{
-                                                    fontSize: '12px',
-                                                    color: '#6B7280',
-                                                    marginBottom: '4px',
-                                                    paddingLeft: '4px'
-                                                }}>{message.sender}</span>
+                                                <span className="message-sender">{message.sender}</span>
                                             )}
-                                            <div style={{
-                                                padding: '12px 16px',
-                                                borderRadius: '18px',
-                                                backgroundColor: message.isOwn ? '#3B82F6' : '#E5E7EB',
-                                                color: message.isOwn ? 'white' : '#1F2937'
-                                            }}>
-                                                <p style={{
-                                                    fontSize: '14px',
-                                                    lineHeight: '1.5',
-                                                    margin: 0
-                                                }}>{message.content}</p>
+                                            <div className={`message-bubble ${message.isOwn ? 'own-bubble' : 'other-bubble'}`}>
+                                                <p className="message-text">{message.content}</p>
                                             </div>
-                                            <span style={{
-                                                fontSize: '11px',
-                                                color: '#9CA3AF',
-                                                marginTop: '4px',
-                                                paddingLeft: '4px'
-                                            }}>{message.time}</span>
+                                            <span className="message-time">{message.time}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -710,59 +531,27 @@ const Chat = () => {
                 </div>
 
                 {/* 메시지 입력 영역 */}
-                <div style={{
-                    backgroundColor: 'white',
-                    borderTop: '1px solid #E5E7EB',
-                    padding: '16px'
-                }}>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'flex-end',
-                        gap: '12px'
-                    }}>
-            <textarea
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={`${getCurrentRoom()?.name}에 메시지 보내기...`}
-                style={{
-                    flex: 1,
-                    backgroundColor: '#F3F4F6',
-                    borderRadius: '20px',
-                    padding: '12px 16px',
-                    border: 'none',
-                    outline: 'none',
-                    resize: 'none',
-                    fontSize: '14px',
-                    minHeight: '24px',
-                    maxHeight: '100px'
-                }}
-                rows="1"
-            />
+                <div className="message-input-container">
+                    <div className="message-input-wrapper">
+                        <textarea
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder={`${getCurrentRoom()?.name}에 메시지 보내기...`}
+                            className="message-input"
+                            rows="1"
+                        />
 
-                        <button style={{
-                            padding: '8px',
-                            borderRadius: '50%',
-                            border: 'none',
-                            cursor: 'pointer',
-                            backgroundColor: 'transparent'
-                        }}>
-                            <Smile style={{color: '#6B7280'}}/>
+                        <button className="input-action-button">
+                            <Smile className="input-action-icon"/>
                         </button>
 
                         <button
                             onClick={handleSendMessage}
                             disabled={!newMessage.trim()}
-                            style={{
-                                padding: '8px',
-                                borderRadius: '50%',
-                                border: 'none',
-                                cursor: !newMessage.trim() ? 'not-allowed' : 'pointer',
-                                backgroundColor: !newMessage.trim() ? '#D1D5DB' : '#3B82F6',
-                                color: !newMessage.trim() ? '#6B7280' : 'white'
-                            }}
+                            className={`send-button ${!newMessage.trim() ? 'disabled' : 'enabled'}`}
                         >
-                            <Send style={{color: 'inherit'}}/>
+                            <Send className="send-icon"/>
                         </button>
                     </div>
                 </div>
@@ -770,79 +559,32 @@ const Chat = () => {
 
             {/* 오른쪽 사이드바 - 현재 채팅방 참여자 */}
             {isRightSidebarOpen && (
-                <div style={{
-                    width: '256px',
-                    backgroundColor: 'white',
-                    borderLeft: '1px solid #E5E7EB',
-                    display: 'flex',
-                    flexDirection: 'column'
-                }}>
-                    <div style={{
-                        padding: '16px',
-                        borderBottom: '1px solid #E5E7EB',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between'
-                    }}>
-                        <div>
-                            <h3 style={{fontSize: '16px', fontWeight: '600', color: '#1F2937', margin: 0}}>참여자</h3>
-                            <p style={{
-                                fontSize: '14px',
-                                color: '#6B7280',
-                                margin: 0
-                            }}>{getCurrentParticipants().length}명</p>
+                <div className="right-sidebar">
+                    <div className="participants-header">
+                        <div className="participants-info">
+                            <h3 className="participants-title">참여자</h3>
+                            <p className="participants-count">{getCurrentParticipants().length}명</p>
                         </div>
                         <button
                             onClick={() => setIsRightSidebarOpen(false)}
-                            style={{
-                                padding: '4px',
-                                backgroundColor: 'transparent',
-                                border: 'none',
-                                cursor: 'pointer',
-                                borderRadius: '4px'
-                            }}
+                            className="close-sidebar-button"
                             title="참여자 목록 닫기"
                         >
-                            <ChevronRight style={{color: '#6B7280'}}/>
+                            <ChevronRight className="close-sidebar-icon"/>
                         </button>
                     </div>
 
-                    <div style={{
-                        flex: 1,
-                        overflowY: 'auto',
-                        padding: '16px'
-                    }}>
-                        <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                    <div className="participants-list">
+                        <div className="participants-grid">
                             {getCurrentParticipants().map((user) => (
-                                <div key={user.id} style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '12px',
-                                    padding: '8px',
-                                    borderRadius: '8px'
-                                }}>
-                                    <div style={{position: 'relative'}}>
-                                        <img src={user.avatar} alt={user.name}
-                                             style={{width: '32px', height: '32px', borderRadius: '50%'}}/>
-                                        <div style={{
-                                            position: 'absolute',
-                                            bottom: '-2px',
-                                            right: '-2px',
-                                            width: '12px',
-                                            height: '12px',
-                                            borderRadius: '50%',
-                                            border: '2px solid white',
-                                            backgroundColor: user.status === 'online' ? '#10B981' : user.status === 'away' ? '#F59E0B' : '#6B7280'
-                                        }}></div>
+                                <div key={user.id} className="participant-item">
+                                    <div className="participant-avatar-container">
+                                        <img src={user.avatar} alt={user.name} className="participant-avatar"/>
+                                        <div className={`participant-status ${user.status || 'offline'}`}></div>
                                     </div>
-                                    <div style={{flex: 1}}>
-                                        <p style={{
-                                            fontSize: '14px',
-                                            fontWeight: '500',
-                                            color: '#1F2937',
-                                            margin: 0
-                                        }}>{user.name}</p>
-                                        <p style={{fontSize: '12px', color: '#6B7280', margin: 0}}>
+                                    <div className="participant-info">
+                                        <p className="participant-name">{user.name}</p>
+                                        <p className="participant-status-text">
                                             {user.status === 'online' ? '온라인' :
                                                 user.status === 'away' ? '자리비움' : '오프라인'}
                                         </p>
@@ -856,37 +598,15 @@ const Chat = () => {
 
             {/* 사이드바가 닫혔을 때 토글 버튼 */}
             {!isRightSidebarOpen && (
-                <div style={{
-                    width: '48px',
-                    backgroundColor: 'white',
-                    borderLeft: '1px solid #E5E7EB',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    padding: '16px 0'
-                }}>
+                <div className="sidebar-toggle">
                     <button
                         onClick={() => setIsRightSidebarOpen(true)}
-                        style={{
-                            padding: '8px',
-                            backgroundColor: 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
-                            borderRadius: '50%'
-                        }}
+                        className="toggle-button"
                         title="참여자 목록 열기"
                     >
-                        <ChevronLeft style={{color: '#6B7280'}}/>
+                        <ChevronLeft className="toggle-icon"/>
                     </button>
-                    <div style={{
-                        marginTop: '8px',
-                        fontSize: '12px',
-                        color: '#6B7280',
-                        writingMode: 'vertical-rl',
-                        textOrientation: 'mixed'
-                    }}>
-                        참여자
-                    </div>
+                    <div className="toggle-text">참여자</div>
                 </div>
             )}
         </div>
