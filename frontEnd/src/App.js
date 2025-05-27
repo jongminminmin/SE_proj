@@ -1,7 +1,6 @@
 import React, {createContext, useContext, useEffect, useState} from 'react';
 import {Navigate, Outlet, Route, Routes, useNavigate} from 'react-router-dom';
 import './App.css';
-import LandingPage from './pages/LandingPage';
 import Login from './pages/Login'; // Login 컴포넌트에서 useAuth().login() 호출 필요
 import FindAccount from './pages/FindAccount';
 import Register from './pages/Register';
@@ -116,7 +115,7 @@ function App() {
             {/* 로그아웃 버튼 예시 (네비게이션 바 등에 위치시킬 수 있음) */}
             {/* <AuthButton /> */}
             <Routes>
-              <Route path="/" element={<LandingPage />} />
+              <Route path="/" element={<Login />} />
               <Route path="/login" element={<Login />} />
               <Route path="/find-account" element={<FindAccount />} />
               <Route path="/register" element={<Register />} />
