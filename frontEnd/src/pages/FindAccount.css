@@ -1,5 +1,65 @@
+/* 사용자 찾기 페이지 전용 컨테이너 */
+.find-account-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #f5f6fa;
+    padding: 2rem;
+}
+
+/* 폼 컨테이너 */
+.find-account-box {
+    background: white;
+    border-radius: 8px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 350px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin: 0 auto;
+}
+
+.find-account-title {
+    color: #222;
+    font-weight: bold;
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+/* 탭 컨테이너 */
+.tab-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+/* 탭 버튼 */
+.tab-button {
+    padding: 0.8rem 1.5rem;
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+}
+
+.tab-button.active {
+    color: #4f8cff;
+    border-bottom-color: #4f8cff;
+}
+
+.tab-button:hover:not(.active) {
+    color: #374151;
+}
+
+/* 폼 설명 */
 .form-description {
-    color: #666;
+    color: #6b7280;
     font-size: 14px;
     margin-bottom: 20px;
     text-align: center;
@@ -9,96 +69,103 @@
 /* 입력 필드 */
 .find-input {
     width: 100%;
-    padding: 12px 15px;
+    padding: 1rem 1.2rem;
     margin-bottom: 15px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.2s ease;
+    background: white;
     box-sizing: border-box;
-    transition: border-color 0.3s;
 }
 
 .find-input:focus {
     outline: none;
-    border-color: #007bff;
+    border-color: #4f8cff;
 }
 
 /* 메시지 */
 .error-message {
-    color: #dc3545;
-    font-size: 14px;
+    background: #fef2f2;
+    color: #dc2626;
+    padding: 0.8rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    border: 1px solid #fecaca;
     margin: 10px 0;
-    padding: 10px;
-    background-color: #f8d7da;
-    border: 1px solid #f5c6cb;
-    border-radius: 4px;
     text-align: center;
 }
 
 .success-message {
-    color: #155724;
-    font-size: 14px;
+    background: #f0fdf4;
+    color: #059669;
+    padding: 0.8rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    border: 1px solid #bbf7d0;
     margin: 10px 0;
-    padding: 10px;
-    background-color: #d4edda;
-    border: 1px solid #c3e6cb;
-    border-radius: 4px;
     text-align: center;
 }
 
 /* 버튼 */
 .find-submit-btn {
     width: 100%;
-    padding: 12px;
-    background-color: #007bff;
+    padding: 1rem;
+    background: #4f8cff;
     color: white;
     border: none;
-    border-radius: 4px;
-    font-size: 16px;
-    font-weight: 500;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: background-color 0.2s ease;
     margin-top: 10px;
 }
 
 .find-submit-btn:hover {
-    background-color: #0056b3;
+    background: #2563eb;
 }
 
 /* 로그인으로 돌아가기 */
 .back-to-login {
-    margin-top: 30px;
-    text-align: center;
-    padding-top: 20px;
-    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: center;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
 }
 
 .back-btn {
     background: none;
     border: none;
-    color: #007bff;
-    font-size: 14px;
+    color: #6b7280;
+    font-size: 0.9rem;
     cursor: pointer;
-    text-decoration: none;
-    transition: color 0.3s;
+    text-decoration: underline;
+    transition: color 0.2s ease;
 }
 
 .back-btn:hover {
-    color: #0056b3;
-    text-decoration: underline;
+    color: #4f8cff;
 }
 
 /* 반응형 디자인 */
 @media (max-width: 480px) {
+    body {
+        padding: 1rem;
+    }
+
     .find-account-box {
-        padding: 30px 20px;
+        padding: 1.5rem;
+        margin: 1rem;
     }
 
     .find-account-title {
-        font-size: 20px;
+        font-size: 1.3rem;
     }
 
     .tab-button {
-        font-size: 14px;
+        font-size: 0.9rem;
+        padding: 0.7rem 1.2rem;
     }
 }
