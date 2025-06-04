@@ -1,114 +1,223 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import styles from './Main.module.css';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Plus, User, Calendar, Flag, MoreHorizontal, ChevronRight, ChevronLeft } from 'lucide-react';
+import styles from './Task.css';
 
-const taskList = [
-  {
-    title: 'UI 디자인 검토',
-    desc: '오늘 오후 3시까지',
-    status: 'progress',
-    color: '',
-  },
-  {
-    title: 'API 문서화',
-    desc: '내일까지',
-    status: 'progress',
-    color: '#f0fff0',
-  },
-  {
-    title: '서버 배포',
-    desc: '지난 주 완료',
-    status: 'completed',
-    color: '',
-  },
-];
+const columnOrder = ['todo', 'progress', 'done'];
+const columnTitles = {
+  todo: '할 일',
+  progress: '진행 중',
+  done: '완료',
+};
 
-const tabList = [
-  { key: 'all', label: '전체' },
-  { key: 'progress', label: '진행중' },
-  { key: 'completed', label: '완료' },
-];
-
-function Task() {
-  const [tab, setTab] = useState('all');
-  const [projectOpen, setProjectOpen] = useState(true);
+const Task = () => {
+  const [tasks, setTasks] = useState([]);
+  const [newTaskModal, setNewTaskModal] = useState(false);
+  const [selectedColumn, setSelectedColumn] = useState('');
+  const [taskForm, setTaskForm] = useState({
+    projectId: '',
+    taskTitle: '',
+    assignee: '',
+    description: '',
+    dueStart: '',
+    dueEnd: '',
+    taskContent: '',
+    status: 'todo',
+  });
+  const [projectIdFilter, setProjectIdFilter] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const projectTitle = queryParams.get('project');
 
-  const filteredTasks =
-    tab === 'all'
-      ? taskList
-      : taskList.filter((t) => t.status === tab);
+  const handleLogout = async () => {
+    try { localStorage.removeItem('token'); } catch (e) {}
+    try { await fetch('/logout', { method: 'POST' }); } catch (e) {}
+    finally { navigate('/login'); }
+  };
+
+  // 1. 전체 Task 불러오기
+  useEffect(() => {
+    fetch('/api/tasks')
+      .then(res => res.json())
+      .then(data => setTasks(data));
+  }, []);
+
+  // 2. Task 추가
+  const handleAddTask = async () => {
+    if (!taskForm.taskTitle.trim() || !taskForm.assignee || !taskForm.dueEnd) {
+      alert('제목, 담당자, 마감일은 필수 입력 항목입니다.');
+      return;
+    }
+    const taskToSend = { ...taskForm, status: taskForm.status || 'todo' };
+    const res = await fetch('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(taskToSend)
+    });
+    let saved = await res.json();
+    if (!saved.status) saved.status = 'todo';
+    setTasks(prev => [...prev, saved]);
+    setNewTaskModal(false);
+  };
+
+  // 3. Task 수정
+  const handleUpdateTask = async (updatedTask) => {
+    await fetch('/api/tasks', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedTask)
+    });
+    // 상태 변경 후 전체 목록 새로 불러오기
+    const res = await fetch('/api/tasks');
+    const data = await res.json();
+    setTasks(data);
+  };
+
+  // 4. Task 삭제
+  const handleDeleteTask = async (taskNo) => {
+    await fetch('/api/tasks', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(taskNo)
+    });
+    setTasks(prev => prev.filter(t => t.taskNo !== taskNo));
+  };
+
+  // 컬럼별로 tasks 분류
+  const getColumnTasks = (status) =>
+    tasks.filter(t => (projectIdFilter ? t.projectId === projectIdFilter : true) && (t.status === status));
+
+  const priorityText = {
+    high: '높음',
+    medium: '보통',
+    low: '낮음'
+  };
+
+  const TaskCard = ({ task }) => {
+    const currentIndex = columnOrder.indexOf(task.status);
+    const canMoveNext = currentIndex < columnOrder.length - 1;
+    const canMovePrev = currentIndex > 0;
+    return (
+      <div className="task-card">
+        <div className="task-header">
+          <h4 className="task-title">{task.taskTitle}</h4>
+          <div className="task-controls">
+            {canMovePrev && (
+              <button onClick={() => handleUpdateTask({ ...task, status: columnOrder[currentIndex - 1] })} className="move-button prev-button" title="이전 단계로">
+                <ChevronLeft size={14} />
+              </button>
+            )}
+            {canMoveNext && (
+              <button onClick={() => handleUpdateTask({ ...task, status: columnOrder[currentIndex + 1] })} className="move-button next-button" title="다음 단계로">
+                <ChevronRight size={14} />
+              </button>
+            )}
+            <button onClick={() => handleDeleteTask(task.taskNo)} className="delete-task-btn">삭제</button>
+            <MoreHorizontal size={16} className="more-menu" />
+          </div>
+        </div>
+        <p className="task-description">{task.description}</p>
+        <div className="task-labels">
+          {task.taskContent && <span className="label">{task.taskContent}</span>}
+        </div>
+        <div className="task-footer">
+          <div className="task-info">
+            <div className="info-group">
+              <User size={12} />
+              <span>{task.assignee?.username || task.assignee}</span>
+            </div>
+            <div className="info-group">
+              <Calendar size={12} />
+              <span>{task.dueEnd ? new Date(task.dueEnd).toLocaleDateString() : ''}</span>
+            </div>
+          </div>
+          <div className="priority">
+            <Flag size={12} className={`priority-flag priority-${task.priority || 'medium'}`} />
+            <span className={`priority-badge priority-${task.priority || 'medium'}`}>{priorityText[task.priority || 'medium']}</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div className={styles.wrapper}>
-      <aside className={styles.sidebar}>
-        <div className={styles.sidebarTitle}>MATE</div>
-        <ul className={styles.sidebarMenu}>
-          <li className={styles.sidebarMenuItem} onClick={() => { setProjectOpen((v) => !v); navigate('/main'); }}>
-            <span role="img" aria-label="project" className={styles.icon}>📋</span> Project
-          </li>
-          {projectOpen && (
-            <ul className={styles.sidebarSubMenu}>
-              <li className={`${styles.sidebarSubMenuItem} ${styles.active}`}>
-                <span role="img" aria-label="task" className={styles.iconSub} onClick={() => navigate('/task')}>📝</span> Task
-              </li>
-            </ul>
-          )}
-          <li className={styles.sidebarMenuItem} onClick={() => alert('채팅 페이지로 이동합니다.')}>
-            <span role="img" aria-label="chat" className={styles.icon}>💬</span> Chat
-          </li>
-          <li className={styles.sidebarMenuItem}>
-            <span role="img" aria-label="settings" className={styles.icon}>⚙️</span> Settings
-          </li>
-        </ul>
-      </aside>
-      <main className={styles.mainContent}>
-        <div className={styles.header}>
-          <div className={styles.titleBox}>
-            <h1 className={styles.title}>Task</h1>
+    <div className="task-board">
+      {/* Header */}
+      <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1 className="header-title">{projectTitle || ''}</h1>
+        </div>
+        <button onClick={handleLogout} style={{ padding: '8px 16px', background: '#007aff', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 500, fontSize: '14px', cursor: 'pointer', height: '40px' }}>로그아웃</button>
+      </div>
+      {/* 프로젝트 현황 */}
+      <div className="project-status">
+        <h3 className="status-title">프로젝트 현황</h3>
+        <div className="status-grid">
+          <div className="status-item">
+            <div className="status-number status-blue">{tasks.length}</div>
+            <div className="status-label">전체 작업</div>
           </div>
-          <button className={styles.logoutBtn}>로그아웃</button>
+          <div className="status-item">
+            <div className="status-number status-yellow">{getColumnTasks('progress').length}</div>
+            <div className="status-label">진행 중</div>
+          </div>
+          <div className="status-item">
+            <div className="status-number status-green">{getColumnTasks('done').length}</div>
+            <div className="status-label">완료</div>
+          </div>
+          <div className="status-item">
+            <div className="status-number status-purple">
+              {tasks.length > 0 ? Math.round((getColumnTasks('done').length / tasks.length) * 100) + '%' : '0%'}
+            </div>
+            <div className="status-label">진행률</div>
+          </div>
         </div>
-        <div className={styles.tabs}>
-          {tabList.map((t) => (
-            <button
-              key={t.key}
-              className={tab === t.key ? `${styles.tab} ${styles.activeTab}` : styles.tab}
-              onClick={() => setTab(t.key)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-        <div className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <div>
-              <h2 className={styles.sectionTitle}>Task</h2>
-              <div className={styles.sectionSubtitle}>할 일을 관리하세요</div>
+      </div>
+      {/* Kanban Board */}
+      <div className="kanban-board">
+        {columnOrder.map((col) => (
+          <div key={col} className={`column ${col}-column`}>
+            <div className="column-header">
+              <h3 className="column-title">
+                {columnTitles[col]}
+                <span className="task-count">{getColumnTasks(col).length}</span>
+              </h3>
+              {col === 'todo' && (
+                <button onClick={() => { setSelectedColumn(col); setTaskForm({ ...taskForm, status: col }); setNewTaskModal(true); }} className="add-task-btn">
+                  <Plus size={18} />
+                </button>
+              )}
+            </div>
+            <div className="tasks-container">
+              {getColumnTasks(col).map((task) => (
+                <TaskCard key={task.taskNo} task={task} />
+              ))}
             </div>
           </div>
-          <div className={styles.cardGrid}>
-            <div className={`${styles.card} ${styles.addCard}`} onClick={() => alert('새 태스크 추가')}>
-              <div className={styles.addCardIcon}>+</div>
-              <div className={styles.addCardText}>새 태스크 추가</div>
+        ))}
+      </div>
+      {/* 새 작업 추가 모달 */}
+      {newTaskModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3 className="modal-title">새 작업 추가 - {columnTitles[selectedColumn]}</h3>
+            <div className="form-container">
+              <input type="text" placeholder="작업 제목 *" value={taskForm.taskTitle} onChange={e => setTaskForm({ ...taskForm, taskTitle: e.target.value })} className="form-input" />
+              <textarea placeholder="작업 설명" value={taskForm.description} onChange={e => setTaskForm({ ...taskForm, description: e.target.value })} className="form-textarea" />
+              <input type="text" placeholder="담당자(이름 또는 ID) *" value={taskForm.assignee} onChange={e => setTaskForm({ ...taskForm, assignee: e.target.value })} className="form-input" />
+              <input type="date" value={taskForm.dueEnd} onChange={e => setTaskForm({ ...taskForm, dueEnd: e.target.value })} className="form-input" />
+              <textarea placeholder="작업 내용" value={taskForm.taskContent} onChange={e => setTaskForm({ ...taskForm, taskContent: e.target.value })} className="form-textarea" />
             </div>
-            {filteredTasks.map((t, i) => (
-              <div className={styles.card} key={i}>
-                <div
-                  className={styles.cardContentPlaceholder}
-                  style={{ backgroundColor: t.color || '#f0f0f0' }}
-                ></div>
-                <div className={styles.cardInfo}>
-                  <div className={styles.cardTitle}>{t.title}</div>
-                  <div className={styles.cardDescription}>{t.desc}</div>
-                </div>
-              </div>
-            ))}
+            <div className="modal-buttons">
+              <button onClick={() => setNewTaskModal(false)} className="btn btn-secondary">취소</button>
+              <button onClick={handleAddTask} className="btn btn-primary">추가</button>
+            </div>
           </div>
         </div>
-      </main>
+      )}
     </div>
   );
-}
+};
 
-export default Task; 
+export default Task;

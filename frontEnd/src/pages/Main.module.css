@@ -228,4 +228,217 @@
   font-size: 13px;
   color: #555;
   line-height: 1.4;
+}
+
+.splitLayout {
+  display: flex;
+  height: 100%;
+  gap: 32px;
+}
+
+.projectListSection {
+  flex: 1;
+  min-width: 220px;
+  max-width: 320px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 24px 16px;
+  margin-right: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.projectList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+.projectListItem {
+  display: flex;
+  align-items: center;
+  padding: 12px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  color: #222;
+  margin-bottom: 8px;
+  transition: background 0.15s;
+}
+.projectListItem:hover {
+  background: #f0f4ff;
+  color: #2563eb;
+}
+.projectDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 12px;
+  display: inline-block;
+}
+
+.rightSection {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 24px;
+}
+.notificationBox {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 20px 24px 16px 24px;
+  margin-bottom: 12px;
+}
+.notificationTitle {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #007aff;
+}
+.notificationList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.notificationItem {
+  font-size: 15px;
+  color: #333;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.notificationItem:last-child {
+  border-bottom: none;
+}
+.calendarBox {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 16px 16px 8px 16px;
+  align-self: flex-end;
+  max-width: 350px;
+}
+.reactCalendar {
+  border: none !important;
+  width: 100% !important;
+  background: transparent !important;
+}
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  top: 0;
+  left: 0;
+  transform: none;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+}
+
+.projectActionBtn {
+  border: none;
+  background: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-left: 6px;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.projectEditBtn {
+  color: #2563eb;
+  background: #eaf1ff;
+}
+.projectEditBtn:hover {
+  background: #d0e3ff;
+  color: #174ea6;
+}
+.projectDeleteBtn {
+  color: #ef4444;
+  background: #ffeaea;
+}
+.projectDeleteBtn:hover {
+  background: #ffd6d6;
+  color: #b91c1c;
+}
+
+.formInput, .formTextarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+  margin-bottom: 8px;
+  background: #f9fafb;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  transition: border 0.18s, box-shadow 0.18s;
+}
+.formInput:focus, .formTextarea:focus {
+  border-color: #2563eb;
+  outline: none;
+  box-shadow: 0 0 0 2px #2563eb22;
+  background: #fff;
+}
+.formTextarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.btnPrimary {
+  background: linear-gradient(90deg, #2563eb 60%, #007aff 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 0;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 8px;
+  transition: background 0.18s, box-shadow 0.18s;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.08);
+}
+.btnPrimary:hover {
+  background: linear-gradient(90deg, #174ea6 60%, #2563eb 100%);
+}
+
+.btnSecondary {
+  background: #f3f4f6;
+  color: #222;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 0;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-right: 8px;
+  transition: background 0.18s, color 0.18s;
+}
+.btnSecondary:hover {
+  background: #e5e7eb;
+  color: #007aff;
 } 
