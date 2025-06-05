@@ -2,11 +2,16 @@ package ac.kr.changwon.se_proj.service.impl;
 
 import ac.kr.changwon.se_proj.dto.ProjectRequestDTO;
 import ac.kr.changwon.se_proj.model.Project;
+import ac.kr.changwon.se_proj.model.User;
 import ac.kr.changwon.se_proj.repository.ProjectRepository;
+import ac.kr.changwon.se_proj.repository.UserRepository;
 import ac.kr.changwon.se_proj.service.Interface.ProjectService;
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 
 @Service
@@ -45,5 +50,19 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     public void delete(Integer id) {
         projectRepository.deleteById(id);
+    }
+
+    @Override
+    public List<User> getMembersOfProject(Integer id) {
+        //프로젝트 ID를 사용하여 해당 프로젝트의 멤버를 가지고 옴
+        Optional<Project> projectOptional = projectRepository.findById(id);
+        if(projectOptional.isPresent()) {
+            Project project = projectOptional.get();
+
+            //project 엔티티에 List<User> members 필드가 있음.
+
+        }
+
+        return Collections.emptyList();
     }
 }

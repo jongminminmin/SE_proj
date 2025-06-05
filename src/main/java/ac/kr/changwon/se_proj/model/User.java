@@ -41,6 +41,10 @@ public class User implements Persistable<String>, Serializable {
     @Transient
     private boolean isNew = false;
 
+    @ManyToOne
+    @JoinColumn(name ="project_id")
+    private Project project;
+
 
     // 비밀번호 재설정 토큰 필드 추가
     @Column(name = "password_reset_token")

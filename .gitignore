@@ -14,6 +14,7 @@ myapp.cer
 start-container.bat
 /frontend/package.json
 /frontend/node_modules
+/node_modules
 
 
 ### STS ###

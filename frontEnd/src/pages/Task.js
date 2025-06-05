@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, User, Calendar, Flag, MoreHorizontal, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Plus, User, Calendar, Flag, MoreHorizontal, ChevronRight, ChevronLeft, Search } from 'lucide-react';
 import styles from './Task.css';
 
 const columnOrder = ['todo', 'progress', 'done'];
@@ -29,12 +29,12 @@ const Task = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const projectTitle = queryParams.get('project');
-  const currentProjectId = queryParams.get('api/projects/')
+  const currentProjectId = queryParams.get('projectId')
 
   const [showAssigneePicker, setShowAssigneePicker] =useState('');
   const [projectMembers, setProjectMembers] = useState([]);
   const [connectedUsers, setConnectedUsers] = useState(new Set());
-  const [assigneeSearchTerm, setAssigneeSearchTerm] = useState('');
+  const [assigneeSearchTerm, setAssigneeSearchTerm] = useState(false);
 
   const filteredMembers = projectMembers.filter(member =>
   member.username.toLowerCase().includes(assigneeSearchTerm.toLowerCase())
@@ -137,7 +137,7 @@ const Task = () => {
         if(response.ok){
           const userName = await response.json();
           setConnectedUsers(new Set(userName));
-          console.log("Fetched Connected users:", response.status);
+          console.log("Fetched Connected users:", userName);
         }
       } catch (error){
         console.error("Error fetching connected users:", error);
@@ -185,7 +185,7 @@ const Task = () => {
               </div>
               <div className="info-group">
                 <Calendar size={12} />
-                <span>{task.dueEnd ? new Date(task.dueEnd).toLocaleDateString() : ''}</span>
+                <span>{task.assignee}</span>
               </div>
             </div>
             <div className="priority">

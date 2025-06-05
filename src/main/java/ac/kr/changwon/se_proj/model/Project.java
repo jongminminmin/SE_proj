@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Data
@@ -31,6 +33,16 @@ public class Project {
 
     @Column(nullable = false)
     private String projectMemberTier;
+
+    //프로젝트 멤버(다대다관계)
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "project_members",
+            joinColumns = @JoinColumn(name ="project_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private Set<User> members = new HashSet<>();
+
 
     /*
     public Project(int projectId, String projectTitle, String description, User owner, Date date, String projectMemberTier) {
