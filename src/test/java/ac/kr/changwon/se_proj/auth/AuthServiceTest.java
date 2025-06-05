@@ -3,14 +3,12 @@ package ac.kr.changwon.se_proj.auth;
 import ac.kr.changwon.se_proj.config.TestSecurityConfig;
 import ac.kr.changwon.se_proj.model.User;
 import ac.kr.changwon.se_proj.repository.UserRepository;
-// AuthService 인터페이스 대신 AuthServiceImpl 구현 클래스를 직접 임포트할 수 있습니다.
-// import ac.kr.changwon.se_proj.service.Interface.AuthService;
-import ac.kr.changwon.se_proj.service.impl.AuthServiceImpl; // 실제 구현 클래스
+import ac.kr.changwon.se_proj.service.impl.AuthServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks; // @InjectMocks 임포트
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.annotation.Import;
@@ -23,7 +21,8 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class) // 순수 Mockito 테스트를 위함
 @Import(TestSecurityConfig.class)
@@ -104,7 +103,6 @@ public class AuthServiceTest {
     @Test
     @DisplayName("회원가입 성공 - 일반 사용자")
     void register_success_roleUser() {
-        // given
         String newUserId = "newuser";
         String newUserEmail = "newuser@example.com";
         String newRawPassword = "newpassword";
@@ -136,7 +134,7 @@ public class AuthServiceTest {
     void register_success_roleAdmin_forAdminId() {
         // given
         String adminId = "admin";
-        String adminEmail = "admin@example.com"; // email 파라미터 추가
+        String adminEmail = "admin@example.com";
         String adminRawPassword = "adminpassword";
         String adminEncodedPassword = "encodedAdminPassword";
 
@@ -151,9 +149,9 @@ public class AuthServiceTest {
 
         // then
         assertTrue(result);
-        verify(userRepository).existsById(adminId); // existsById 호출 검증 추가
-        verify(userRepository).existsByEmail(adminEmail); // existsByEmail 호출 검증 추가
-        verify(passwordEncoder).encode(adminRawPassword); // encode 호출 검증 추가
+        verify(userRepository).existsById(adminId);
+        verify(userRepository).existsByEmail(adminEmail);
+        verify(passwordEncoder).encode(adminRawPassword);
         verify(userRepository).save(argThat(user ->
                 user.getId().equals(adminId) &&
                         "ROLE_ADMIN".equals(user.getRole())
@@ -185,7 +183,7 @@ public class AuthServiceTest {
         verify(passwordEncoder).encode(rootRawPassword); // encode 호출 검증 추가
         verify(userRepository).save(argThat(user ->
                 user.getId().equals(rootId) &&
-                        "ROLE_ADMIN".equals(user.getRole())
+                        "ROLE_ROOT".equals(user.getRole())
         ));
     }
 

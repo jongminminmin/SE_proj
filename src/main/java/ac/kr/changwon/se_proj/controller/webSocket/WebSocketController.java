@@ -25,7 +25,6 @@ public class WebSocketController {
 
     private static final Logger log = LoggerFactory.getLogger(WebSocketController.class);
 
-
     private final SimpMessageSendingOperations messagingTemplate;
     private final ChatMessageRepository chatMessageRepository;
     private final UserRepository userRepository;

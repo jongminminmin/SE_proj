@@ -1,33 +1,32 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, {useState, useRef, useEffect, useCallback, use} from 'react';
 import { Client } from '@stomp/stompjs';
 import { useNavigate } from "react-router-dom";
-import './Chat.css';
 
 // SVG 아이콘 컴포넌트들
-const Send = ({ className }) => (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+const Send = ({ style }) => (
+    <svg style={{ width: '20px', height: '20px', ...style }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
     </svg>
 );
 
-const Smile = ({ className }) => (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+const Smile = ({ style }) => (
+    <svg style={{ width: '20px', height: '20px', ...style }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="10"/>
         <path d="m9 9 6 0"/>
         <path d="m9 15 6 0"/>
     </svg>
 );
 
-const MoreVertical = ({ className }) => (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+const MoreVertical = ({ style }) => (
+    <svg style={{ width: '20px', height: '20px', ...style }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="1"/>
         <circle cx="12" cy="5" r="1"/>
         <circle cx="12" cy="19" r="1"/>
     </svg>
 );
 
-const Hash = ({ className }) => (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+const Hash = ({ style }) => (
+    <svg style={{ width: '24px', height: '24px', ...style }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <line x1="4" y1="9" x2="20" y2="9"/>
         <line x1="4" y1="15" x2="20" y2="15"/>
         <line x1="10" y1="3" x2="8" y2="21"/>
@@ -35,8 +34,8 @@ const Hash = ({ className }) => (
     </svg>
 );
 
-const Users = ({ className }) => (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+const Users = ({ style }) => (
+    <svg style={{ width: '20px', height: '20px', ...style }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
         <circle cx="9" cy="7" r="4"/>
         <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
@@ -44,19 +43,18 @@ const Users = ({ className }) => (
     </svg>
 );
 
-const ChevronLeft = ({ className }) => (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+const ChevronLeft = ({ style }) => (
+    <svg style={{ width: '16px', height: '16px', ...style }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
     </svg>
 );
 
-const ChevronRight = ({ className }) => (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+const ChevronRight = ({ style }) => (
+    <svg style={{ width: '16px', height: '16px', ...style }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
     </svg>
 );
 
-// 이 상수는 서버 설정에서 가져오는 것이 좋습니다.
 const PRIVATE_ROOM_MAX_ID_FROM_SERVER = 10;
 
 const Chat = () => {
@@ -84,6 +82,11 @@ const Chat = () => {
     const navigate = useNavigate();
 
     const messagesEndRef = useRef(null);
+
+    //웹소켓 연결 확인
+    const [connectedUsers, setConnectedUsers] = useState(new Set());
+
+
 
     // 스크롤 핸들러
     const scrollToBottom = useCallback(() => {
@@ -134,7 +137,7 @@ const Chat = () => {
                 setChatRoomsLoading(true);
                 setChatRoomsError('');
                 try {
-                    const response = await fetch(`/api/chat/my-rooms`);
+                    const response = await fetch(`/api/chats/my-rooms`);
                     if (response.ok) {
                         const roomsData = await response.json();
                         setChatRooms(roomsData || []);
@@ -168,7 +171,7 @@ const Chat = () => {
                 setAllUsersLoading(true);
                 setAllUsersError('');
                 try {
-                    const response = await fetch(`/api/users`);
+                    const response = await fetch(`/api/users/api/chat/`);
                     if (response.ok) {
                         const usersData = await response.json();
                         const formattedUsers = usersData.map(u => ({
@@ -261,7 +264,7 @@ const Chat = () => {
         const client = new Client({
             brokerURL,
             connectHeaders: {
-                userId: currentUser.id.toString(),
+                username: currentUser.name,
             },
             debug: (str) => {
                 console.log(new Date(), 'STOMP DEBUG: ', str);
@@ -275,6 +278,22 @@ const Chat = () => {
                 stompClientRef.current.roomIdBeforeDeactivation = currentChatRoom;
                 stompClientRef.current.userIdBeforeDeactivation = currentUser.id;
                 console.log(`STOMP Connected (room string ID: ${currentChatRoom}, intID: ${intRoomIdForSubscription}) as user: ${currentUser.id}`, frame);
+
+
+                client.subscribe('/topic/connectedUsers', (messages) =>{
+                    try{
+                        //백엔드에서 보낸 connectedUsers Set<String>을 JSON으로 파싱
+                        const updatedConnectedUsersArray = JSON.parse(messages.body);
+                        setConnectedUsers(new Set(updatedConnectedUsersArray));
+                        console.log("Updated connected users via WebSocket: ", updatedConnectedUsersArray)
+                    } catch (error){
+                        console.error("Failed to parse connected users update message: ", messages.body, error);
+                    }
+                });
+
+                console.log("Subscribed to /topic/connectedUsers for real-time updates.");
+
+
 
                 let subscriptionDestination;
                 if (intRoomIdForSubscription <= PRIVATE_ROOM_MAX_ID_FROM_SERVER) {
@@ -410,46 +429,181 @@ const Chat = () => {
         return participants;
     };
 
+    const getDisplayedUsersInRightSidebar = useCallback(() => {
+        if (!allUsers || allUsers.length === 0) {
+            return [];
+        }
+
+        const usersWithStatus = allUsers.map(u => ({
+            ...u,
+            // connectedUsers Set에 해당 사용자 ID (또는 여기서는 username)가 있는지 확인하여 'online' 상태 설정
+            // 백엔드 WebSocketSessionTracker가 username을 저장하므로, connectedUsers에는 username이 들어있을 것입니다.
+            // 따라서, u.username (또는 u.id.toString()이 아니라면 u.username)을 사용해야 합니다.
+            status: connectedUsers.has(u.username) ? 'online' : 'offline', // changed from u.id.toString() to u.username
+            avatar: u.avatar || 'https://via.placeholder.com/32/CCCCCC/FFFFFF/?text=' + u.username.charAt(0).toUpperCase()
+        }));
+
+        let sortedUsers = [];
+        if (currentUser) {
+            // currentUser의 id와 비교할 때는 여전히 id를 사용해야 합니다.
+            // allUsers의 u.id는 DB의 ID, connectedUsers는 username.
+            // 따라서, connectedUsers.has(currentUser.name)으로 현재 사용자 상태를 확인합니다.
+            const otherUsers = usersWithStatus.filter(u => u.id !== currentUser.id.toString());
+            const me = usersWithStatus.find(u => u.id === currentUser.id.toString());
+
+            if (me) {
+                sortedUsers.push({
+                    ...me,
+                    avatar: currentUser.avatar,
+                    name: currentUser.name,
+                    status: connectedUsers.has(currentUser.name) ? 'online' : 'offline' // changed to currentUser.name
+                });
+            }
+            sortedUsers = sortedUsers.concat(otherUsers);
+        } else {
+            sortedUsers = usersWithStatus;
+        }
+
+        // 온라인 사용자를 먼저, 그 다음 이름순으로 정렬
+        sortedUsers.sort((a, b) => {
+            if (a.status === 'online' && b.status !== 'online') return -1;
+            if (a.status !== 'online' && b.status === 'online') return 1;
+            return a.name.localeCompare(b.name);
+        });
+
+        return sortedUsers;
+
+
+    },[allUsers, connectedUsers, currentUser]);
+
+
     return (
-        <div className="chat-container">
+        <div style={{
+            display: 'flex',
+            height: '100vh',
+            backgroundColor: '#F9FAFB',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+        }}>
             {/* 왼쪽 사이드바 - 채팅방 목록 */}
-            <div className="left-sidebar">
-                <div className="sidebar-header">
-                    <h2 className="sidebar-title">프로젝트 채팅</h2>
-                    <div className="connection-status">
-                        <div className={`status-indicator ${isConnected ? 'connected' : 'disconnected'}`}></div>
-                        <span className="status-text">
-                            {isConnected ? '연결됨' : '연결 중...'}
-                        </span>
+            <div style={{
+                width: '320px',
+                backgroundColor: 'white',
+                borderRight: '1px solid #E5E7EB',
+                display: 'flex',
+                flexDirection: 'column'
+            }}>
+                <div style={{
+                    padding: '16px',
+                    borderBottom: '1px solid #E5E7EB'
+                }}>
+                    <h2 style={{fontSize: '18px', fontWeight: '600', color: '#1F2937', margin: 0}}>프로젝트 채팅</h2>
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        marginTop: '8px'
+                    }}>
+                        <div style={{
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            marginRight: '8px',
+                            backgroundColor: isConnected ? '#10B981' : '#EF4444'
+                        }}></div>
+                        <span style={{fontSize: '12px', color: '#6B7280'}}>
+              {isConnected ? '연결됨' : '연결 중...'}
+            </span>
                     </div>
                 </div>
 
-                <div className="rooms-list">
+                <div style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    padding: '8px'
+                }}>
                     {chatRooms.map((room) => (
                         <div
                             key={room.id}
                             onClick={() => handleRoomChange(room.id)}
-                            className={`room-item ${currentChatRoom === room.id ? 'active' : ''}`}
+                            style={{
+                                padding: '12px',
+                                borderRadius: '8px',
+                                marginBottom: '8px',
+                                cursor: 'pointer',
+                                backgroundColor: currentChatRoom === room.id ? '#EFF6FF' : 'transparent',
+                                borderLeft: currentChatRoom === room.id ? '4px solid #3B82F6' : 'none'
+                            }}
                         >
-                            <div className="room-content">
-                                <div className="room-avatar" style={{backgroundColor: room.color}}>
-                                    <Hash className="room-icon"/>
+                            <div style={{display: 'flex', alignItems: 'flex-start', gap: '12px'}}>
+                                <div style={{
+                                    width: '48px',
+                                    height: '48px',
+                                    backgroundColor: room.color,
+                                    borderRadius: '8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0
+                                }}>
+                                    <Hash style={{color: 'white'}}/>
                                 </div>
-                                <div className="room-info">
-                                    <div className="room-header">
-                                        <h3 className="room-name">{room.name}</h3>
+                                <div style={{flex: 1, minWidth: 0}}>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between'
+                                    }}>
+                                        <h3 style={{
+                                            fontSize: '14px',
+                                            fontWeight: '500',
+                                            color: '#1F2937',
+                                            margin: 0,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
+                                        }}>{room.name}</h3>
                                         {room.unreadCount > 0 && (
-                                            <span className="unread-badge">
-                                                {room.unreadCount}
-                                            </span>
+                                            <span style={{
+                                                backgroundColor: '#EF4444',
+                                                color: 'white',
+                                                fontSize: '11px',
+                                                borderRadius: '12px',
+                                                padding: '2px 8px',
+                                                marginLeft: '8px'
+                                            }}>
+                        {room.unreadCount}
+                      </span>
                                         )}
                                     </div>
-                                    <p className="room-description">{room.description}</p>
-                                    <p className="room-last-message">{room.lastMessage}</p>
-                                    <div className="room-footer">
-                                        <span className="last-message-time">{room.lastMessageTime}</span>
-                                        <div className="participants-count">
-                                            <Users className="participants-icon"/>
+                                    <p style={{
+                                        fontSize: '12px',
+                                        color: '#6B7280',
+                                        margin: '4px 0',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap'
+                                    }}>{room.description}</p>
+                                    <p style={{
+                                        fontSize: '12px',
+                                        color: '#9CA3AF',
+                                        margin: '4px 0',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap'
+                                    }}>{room.lastMessage}</p>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        marginTop: '8px'
+                                    }}>
+                                        <span style={{fontSize: '11px', color: '#9CA3AF'}}>{room.lastMessageTime}</span>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            fontSize: '11px',
+                                            color: '#9CA3AF'
+                                        }}>
+                                            <Users style={{width: '12px', height: '12px', marginRight: '4px'}}/>
                                             {room.participants}
                                         </div>
                                     </div>
@@ -461,66 +615,160 @@ const Chat = () => {
             </div>
 
             {/* 메인 채팅 영역 */}
-            <div className="main-chat">
+            <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column'
+            }}>
                 {/* 채팅 헤더 */}
-                <div className="chat-header">
-                    <div className="header-left">
-                        <div className="current-room-avatar" style={{backgroundColor: getCurrentRoom()?.color}}>
-                            <Hash className="room-icon"/>
+                <div style={{
+                    backgroundColor: 'white',
+                    borderBottom: '1px solid #E5E7EB',
+                    padding: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }}>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                        <div style={{
+                            width: '40px',
+                            height: '40px',
+                            backgroundColor: getCurrentRoom()?.color,
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <Hash style={{color: 'white'}}/>
                         </div>
-                        <div className="current-room-info">
-                            <h3 className="current-room-name">{getCurrentRoom()?.name}</h3>
-                            <p className="current-room-participants">{getCurrentParticipants().length}명 참여 중</p>
+                        <div>
+                            <h3 style={{
+                                fontSize: '16px',
+                                fontWeight: '600',
+                                color: '#1F2937',
+                                margin: 0
+                            }}>{getCurrentRoom()?.name}</h3>
+                            <p style={{fontSize: '14px', color: '#6B7280', margin: 0}}>{getCurrentParticipants().length}명
+                                참여 중</p>
                         </div>
                     </div>
 
-                    <div className="header-actions">
+                    <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
                         <button
                             onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
-                            className="action-button"
+                            style={{
+                                padding: '8px',
+                                borderRadius: '50%',
+                                border: 'none',
+                                cursor: 'pointer',
+                                backgroundColor: 'transparent'
+                            }}
                             title={isRightSidebarOpen ? "참여자 목록 숨기기" : "참여자 목록 보기"}
                         >
-                            <Users className="action-icon"/>
+                            <Users style={{color: '#6B7280'}}/>
                         </button>
-                        <button className="action-button">
-                            <MoreVertical className="action-icon"/>
+                        <button style={{
+                            padding: '8px',
+                            borderRadius: '50%',
+                            border: 'none',
+                            cursor: 'pointer',
+                            backgroundColor: 'transparent'
+                        }}>
+                            <MoreVertical style={{color: '#6B7280'}}/>
                         </button>
                     </div>
                 </div>
 
                 {/* 메시지 영역 */}
-                <div className="messages-container">
+                <div style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    padding: '16px'
+                }}>
                     {getCurrentMessages().length === 0 ? (
                         // 빈 채팅방 상태
-                        <div className="empty-chat">
-                            <div className="empty-chat-avatar" style={{backgroundColor: getCurrentRoom()?.color}}>
-                                <Hash className="empty-chat-icon"/>
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            height: '100%',
+                            color: '#6B7280'
+                        }}>
+                            <div style={{
+                                width: '64px',
+                                height: '64px',
+                                backgroundColor: getCurrentRoom()?.color,
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginBottom: '16px'
+                            }}>
+                                <Hash style={{color: 'white', width: '32px', height: '32px'}}/>
                             </div>
-                            <h3 className="empty-chat-title">{getCurrentRoom()?.name}</h3>
-                            <p className="empty-chat-description">
+                            <h3 style={{
+                                fontSize: '18px',
+                                fontWeight: '500',
+                                marginBottom: '8px'
+                            }}>{getCurrentRoom()?.name}</h3>
+                            <p style={{fontSize: '14px', textAlign: 'center', lineHeight: '1.5'}}>
                                 {getCurrentRoom()?.description}<br/>
                                 팀원들과 소통을 시작해보세요.
                             </p>
                         </div>
                     ) : (
                         // 메시지 목록
-                        <div className="messages-list">
+                        <div>
                             {getCurrentMessages().map((message) => (
-                                <div key={message.id} className={`message ${message.isOwn ? 'own' : 'other'}`}>
-                                    <div className="message-content">
+                                <div key={message.id} style={{
+                                    display: 'flex',
+                                    justifyContent: message.isOwn ? 'flex-end' : 'flex-start',
+                                    marginBottom: '16px'
+                                }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'flex-end',
+                                        gap: '8px',
+                                        flexDirection: message.isOwn ? 'row-reverse' : 'row',
+                                        maxWidth: '70%'
+                                    }}>
                                         <img
                                             src={message.avatar}
                                             alt={message.sender}
-                                            className="message-avatar"
+                                            style={{width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0}}
                                         />
-                                        <div className="message-body">
+                                        <div style={{
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: message.isOwn ? 'flex-end' : 'flex-start'
+                                        }}>
                                             {!message.isOwn && (
-                                                <span className="message-sender">{message.sender}</span>
+                                                <span style={{
+                                                    fontSize: '12px',
+                                                    color: '#6B7280',
+                                                    marginBottom: '4px',
+                                                    paddingLeft: '4px'
+                                                }}>{message.sender}</span>
                                             )}
-                                            <div className={`message-bubble ${message.isOwn ? 'own-bubble' : 'other-bubble'}`}>
-                                                <p className="message-text">{message.content}</p>
+                                            <div style={{
+                                                padding: '12px 16px',
+                                                borderRadius: '18px',
+                                                backgroundColor: message.isOwn ? '#3B82F6' : '#E5E7EB',
+                                                color: message.isOwn ? 'white' : '#1F2937'
+                                            }}>
+                                                <p style={{
+                                                    fontSize: '14px',
+                                                    lineHeight: '1.5',
+                                                    margin: 0
+                                                }}>{message.content}</p>
                                             </div>
-                                            <span className="message-time">{message.time}</span>
+                                            <span style={{
+                                                fontSize: '11px',
+                                                color: '#9CA3AF',
+                                                marginTop: '4px',
+                                                paddingLeft: '4px'
+                                            }}>{message.time}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -531,66 +779,154 @@ const Chat = () => {
                 </div>
 
                 {/* 메시지 입력 영역 */}
-                <div className="message-input-container">
-                    <div className="message-input-wrapper">
-                        <textarea
-                            value={newMessage}
-                            onChange={(e) => setNewMessage(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder={`${getCurrentRoom()?.name}에 메시지 보내기...`}
-                            className="message-input"
-                            rows="1"
-                        />
+                <div style={{
+                    backgroundColor: 'white',
+                    borderTop: '1px solid #E5E7EB',
+                    padding: '16px'
+                }}>
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'flex-end',
+                        gap: '12px'
+                    }}>
+            <textarea
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder={`${getCurrentRoom()?.name}에 메시지 보내기...`}
+                style={{
+                    flex: 1,
+                    backgroundColor: '#F3F4F6',
+                    borderRadius: '20px',
+                    padding: '12px 16px',
+                    border: 'none',
+                    outline: 'none',
+                    resize: 'none',
+                    fontSize: '14px',
+                    minHeight: '24px',
+                    maxHeight: '100px'
+                }}
+                rows="1"
+            />
 
-                        <button className="input-action-button">
-                            <Smile className="input-action-icon"/>
+                        <button style={{
+                            padding: '8px',
+                            borderRadius: '50%',
+                            border: 'none',
+                            cursor: 'pointer',
+                            backgroundColor: 'transparent'
+                        }}>
+                            <Smile style={{color: '#6B7280'}}/>
                         </button>
 
                         <button
                             onClick={handleSendMessage}
                             disabled={!newMessage.trim()}
-                            className={`send-button ${!newMessage.trim() ? 'disabled' : 'enabled'}`}
+                            style={{
+                                padding: '8px',
+                                borderRadius: '50%',
+                                border: 'none',
+                                cursor: !newMessage.trim() ? 'not-allowed' : 'pointer',
+                                backgroundColor: !newMessage.trim() ? '#D1D5DB' : '#3B82F6',
+                                color: !newMessage.trim() ? '#6B7280' : 'white'
+                            }}
                         >
-                            <Send className="send-icon"/>
+                            <Send style={{color: 'inherit'}}/>
                         </button>
                     </div>
                 </div>
             </div>
 
-            {/* 오른쪽 사이드바 - 현재 채팅방 참여자 */}
+
+            {/* 오른쪽 사이드 바 - 모든 사용자 목록 (온라인 상태 포함)*/}
             {isRightSidebarOpen && (
-                <div className="right-sidebar">
-                    <div className="participants-header">
-                        <div className="participants-info">
-                            <h3 className="participants-title">참여자</h3>
-                            <p className="participants-count">{getCurrentParticipants().length}명</p>
+                <div style={{
+                    width: '256px',
+                    backgroundColor: 'white',
+                    borderLeft: '1px solid #E5E7EB',
+                    display: 'flex',
+                    flexDirection: 'column'
+                }}>
+                    <div style={{
+                        padding: '16px',
+                        borderBottom: '1px solid #E5E7EB',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                    }}>
+                        <div>
+                            {/* 텍스트 변경: "참여자" -> "모든 사용자" 또는 "사용자" */}
+                            <h3 style={{fontSize: '16px', fontWeight: '600', color: '#1F2937', margin: 0}}>모든 사용자</h3>
+                            {/* 현재 사이드바에 표시되는 사용자 수를 getDisplayedUsersInRightSidebar().length로 표시 */}
+                            <p style={{
+                                fontSize: '14px',
+                                color: '#6B7280',
+                                margin: 0
+                            }}>{getDisplayedUsersInRightSidebar().length}명</p>
                         </div>
                         <button
                             onClick={() => setIsRightSidebarOpen(false)}
-                            className="close-sidebar-button"
-                            title="참여자 목록 닫기"
+                            style={{
+                                padding: '4px',
+                                backgroundColor: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                borderRadius: '4px'
+                            }}
+                            title="사용자 목록 닫기" // 툴팁 텍스트 변경
                         >
-                            <ChevronRight className="close-sidebar-icon"/>
+                            <ChevronRight style={{color: '#6B7280'}}/>
                         </button>
                     </div>
 
-                    <div className="participants-list">
-                        <div className="participants-grid">
-                            {getCurrentParticipants().map((user) => (
-                                <div key={user.id} className="participant-item">
-                                    <div className="participant-avatar-container">
-                                        <img src={user.avatar} alt={user.name} className="participant-avatar"/>
-                                        <div className={`participant-status ${user.status || 'offline'}`}></div>
+                    <div style={{
+                        flex: 1,
+                        overflowY: 'auto',
+                        padding: '16px'
+                    }}>
+                        <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                            {/* getCurrentParticipants() 대신 getDisplayedUsersInRightSidebar() 사용 */}
+                            {getDisplayedUsersInRightSidebar().map((user) => (
+                                <div key={user.id} style={{ // key는 user.id로 유지
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    padding: '8px',
+                                    borderRadius: '8px'
+                                }}>
+                                    <div style={{position: 'relative'}}>
+                                        <img src={user.avatar} alt={user.name}
+                                             style={{width: '32px', height: '32px', borderRadius: '50%'}}/>
+                                        <div style={{
+                                            position: 'absolute',
+                                            bottom: '-2px',
+                                            right: '-2px',
+                                            width: '12px',
+                                            height: '12px',
+                                            borderRadius: '50%',
+                                            border: '2px solid white',
+                                            // user.status는 'online' 또는 'offline'이 될 것입니다.
+                                            // 'away' 상태는 connectedUsers만으로는 알 수 없으므로, 제거하거나 별도 로직이 필요합니다.
+                                            backgroundColor: user.status === 'online' ? '#10B981' : '#6B7280' // 'away' 제거
+                                        }}></div>
                                     </div>
-                                    <div className="participant-info">
-                                        <p className="participant-name">{user.name}</p>
-                                        <p className="participant-status-text">
-                                            {user.status === 'online' ? '온라인' :
-                                                user.status === 'away' ? '자리비움' : '오프라인'}
+                                    <div style={{flex: 1}}>
+                                        <p style={{
+                                            fontSize: '14px',
+                                            fontWeight: '500',
+                                            color: '#1F2937',
+                                            margin: 0
+                                        }}>{user.name}</p>
+                                        <p style={{fontSize: '12px', color: '#6B7280', margin: 0}}>
+                                            {/* user.status는 'online' 또는 'offline'이므로 조건 변경 */}
+                                            {user.status === 'online' ? '온라인' : '오프라인'}
                                         </p>
                                     </div>
                                 </div>
                             ))}
+                            {/* 로딩 및 에러 메시지 추가 (getDisplayedUsersInRightSidebar 함수에 사용된 allUsersLoading/allUsersError 상태 참조) */}
+                            {allUsersLoading && <div style={{fontSize: '14px', color: '#6B7280', textAlign: 'center', padding: '16px'}}>사용자 목록 로딩 중...</div>}
+                            {allUsersError && <div style={{fontSize: '14px', color: '#EF4444', textAlign: 'center', padding: '16px'}}>오류: {allUsersError}</div>}
                         </div>
                     </div>
                 </div>
@@ -598,15 +934,37 @@ const Chat = () => {
 
             {/* 사이드바가 닫혔을 때 토글 버튼 */}
             {!isRightSidebarOpen && (
-                <div className="sidebar-toggle">
+                <div style={{
+                    width: '48px',
+                    backgroundColor: 'white',
+                    borderLeft: '1px solid #E5E7EB',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: '16px 0'
+                }}>
                     <button
                         onClick={() => setIsRightSidebarOpen(true)}
-                        className="toggle-button"
+                        style={{
+                            padding: '8px',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            borderRadius: '50%'
+                        }}
                         title="참여자 목록 열기"
                     >
-                        <ChevronLeft className="toggle-icon"/>
+                        <ChevronLeft style={{color: '#6B7280'}}/>
                     </button>
-                    <div className="toggle-text">참여자</div>
+                    <div style={{
+                        marginTop: '8px',
+                        fontSize: '12px',
+                        color: '#6B7280',
+                        writingMode: 'vertical-rl',
+                        textOrientation: 'mixed'
+                    }}>
+                        참여자
+                    </div>
                 </div>
             )}
         </div>

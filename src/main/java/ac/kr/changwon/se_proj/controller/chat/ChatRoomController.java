@@ -20,7 +20,11 @@ import java.util.List;
 public class ChatRoomController {
 
     private final static Logger logger= LoggerFactory.getLogger(ChatRoomController.class);
-    private ChatRoomService chatRoomService;
+    private final ChatRoomService chatRoomService;
+
+    public ChatRoomController(ChatRoomService chatRoomService) {
+        this.chatRoomService = chatRoomService;
+    }
 
 
     //채팅방 조회

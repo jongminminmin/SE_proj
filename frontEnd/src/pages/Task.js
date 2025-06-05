@@ -29,6 +29,17 @@ const Task = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const projectTitle = queryParams.get('project');
+  const currentProjectId = queryParams.get('api/projects/')
+
+  const [showAssigneePicker, setShowAssigneePicker] =useState('');
+  const [projectMembers, setProjectMembers] = useState([]);
+  const [connectedUsers, setConnectedUsers] = useState(new Set());
+  const [assigneeSearchTerm, setAssigneeSearchTerm] = useState('');
+
+  const filteredMembers = projectMembers.filter(member =>
+  member.username.toLowerCase().includes(assigneeSearchTerm.toLowerCase())
+  );
+
 
   const handleLogout = async () => {
     try { localStorage.removeItem('token'); } catch (e) {}
@@ -38,9 +49,9 @@ const Task = () => {
 
   // 1. 전체 Task 불러오기
   useEffect(() => {
-    fetch('/api/tasks')
-      .then(res => res.json())
-      .then(data => setTasks(data));
+    fetch('/api/tasks/getAll')
+        .then(res => res.json())
+        .then(data => setTasks(data));
   }, []);
 
   // 2. Task 추가
@@ -86,7 +97,7 @@ const Task = () => {
 
   // 컬럼별로 tasks 분류
   const getColumnTasks = (status) =>
-    tasks.filter(t => (projectIdFilter ? t.projectId === projectIdFilter : true) && (t.status === status));
+      tasks.filter(t => (projectIdFilter ? t.projectId === projectIdFilter : true) && (t.status === status));
 
   const priorityText = {
     high: '높음',
@@ -94,129 +105,274 @@ const Task = () => {
     low: '낮음'
   };
 
+  //현재 프로젝트 ID에 따라 프로젝트 멤버 불러오기
+  useEffect(() => {
+    if(currentProjectId) {
+      //API : GET /api/projects/{projectId}/users 호출
+      fetch(`/api/projects/${currentProjectId}/users`)
+          .then(res => {
+            if(!res.ok){
+              throw new Error(`Failed to fetch project members for project ${currentProjectId}: ${res.statusText}`);
+            }
+
+            return res.json();
+          })
+          .then(data => {
+            setProjectMembers(data);
+            console.log("Fetched project members: ", data);
+          })
+          .catch(error => {
+            console.error("Error fetching project members: ", error);
+          });
+    }
+  }, [currentProjectId]);
+
+  //온라인 사용자 목록을 주기적으로 가지고 옴
+  //간소화를 위해 초기 렌더링 시 한 번 호출하고, 필요하면 주기적으로 호출하게 설정 가능
+  useEffect(() => {
+    const fetchConnectedUsers = async () => {
+      try {
+        //API : get /api/users/connected call
+        const response = await fetch('/api/users/connected');
+        if(response.ok){
+          const userName = await response.json();
+          setConnectedUsers(new Set(userName));
+          console.log("Fetched Connected users:", response.status);
+        }
+      } catch (error){
+        console.error("Error fetching connected users:", error);
+      }
+    };
+
+    fetchConnectedUsers();
+    //주기적 업데이트
+    const interval = setInterval(fetchConnectedUsers, 10000);
+    return () => clearInterval(interval);
+  },[]);
+
   const TaskCard = ({ task }) => {
     const currentIndex = columnOrder.indexOf(task.status);
     const canMoveNext = currentIndex < columnOrder.length - 1;
     const canMovePrev = currentIndex > 0;
     return (
-      <div className="task-card">
-        <div className="task-header">
-          <h4 className="task-title">{task.taskTitle}</h4>
-          <div className="task-controls">
-            {canMovePrev && (
-              <button onClick={() => handleUpdateTask({ ...task, status: columnOrder[currentIndex - 1] })} className="move-button prev-button" title="이전 단계로">
-                <ChevronLeft size={14} />
-              </button>
-            )}
-            {canMoveNext && (
-              <button onClick={() => handleUpdateTask({ ...task, status: columnOrder[currentIndex + 1] })} className="move-button next-button" title="다음 단계로">
-                <ChevronRight size={14} />
-              </button>
-            )}
-            <button onClick={() => handleDeleteTask(task.taskNo)} className="delete-task-btn">삭제</button>
-            <MoreHorizontal size={16} className="more-menu" />
-          </div>
-        </div>
-        <p className="task-description">{task.description}</p>
-        <div className="task-labels">
-          {task.taskContent && <span className="label">{task.taskContent}</span>}
-        </div>
-        <div className="task-footer">
-          <div className="task-info">
-            <div className="info-group">
-              <User size={12} />
-              <span>{task.assignee?.username || task.assignee}</span>
-            </div>
-            <div className="info-group">
-              <Calendar size={12} />
-              <span>{task.dueEnd ? new Date(task.dueEnd).toLocaleDateString() : ''}</span>
+        <div className="task-card">
+          <div className="task-header">
+            <h4 className="task-title">{task.taskTitle}</h4>
+            <div className="task-controls">
+              {canMovePrev && (
+                  <button onClick={() => handleUpdateTask({ ...task, status: columnOrder[currentIndex - 1] })} className="move-button prev-button" title="이전 단계로">
+                    <ChevronLeft size={14} />
+                  </button>
+              )}
+              {canMoveNext && (
+                  <button onClick={() => handleUpdateTask({ ...task, status: columnOrder[currentIndex + 1] })} className="move-button next-button" title="다음 단계로">
+                    <ChevronRight size={14} />
+                  </button>
+              )}
+              <button onClick={() => handleDeleteTask(task.taskNo)} className="delete-task-btn">삭제</button>
+              <MoreHorizontal size={16} className="more-menu" />
             </div>
           </div>
-          <div className="priority">
-            <Flag size={12} className={`priority-flag priority-${task.priority || 'medium'}`} />
-            <span className={`priority-badge priority-${task.priority || 'medium'}`}>{priorityText[task.priority || 'medium']}</span>
+          <p className="task-description">{task.description}</p>
+          <div className="task-labels">
+            {task.taskContent && <span className="label">{task.taskContent}</span>}
+          </div>
+          <div className="task-footer">
+            <div className="task-info">
+              <div className="info-group">
+                <User size={12} />
+                <span>{task.assignee?.username || task.assignee}</span>
+              </div>
+              <div className="info-group">
+                <Calendar size={12} />
+                <span>{task.dueEnd ? new Date(task.dueEnd).toLocaleDateString() : ''}</span>
+              </div>
+            </div>
+            <div className="priority">
+              <Flag size={12} className={`priority-flag priority-${task.priority || 'medium'}`} />
+              <span className={`priority-badge priority-${task.priority || 'medium'}`}>{priorityText[task.priority || 'medium']}</span>
+            </div>
           </div>
         </div>
-      </div>
     );
   };
 
   return (
-    <div className="task-board">
-      {/* Header */}
-      <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 className="header-title">{projectTitle || ''}</h1>
+      <div className="task-board">
+        {/* Header */}
+        <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1 className="header-title">{projectTitle || ''}</h1>
+          </div>
+          <button onClick={handleLogout} style={{ padding: '8px 16px', background: '#007aff', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 500, fontSize: '14px', cursor: 'pointer', height: '40px' }}>로그아웃</button>
         </div>
-        <button onClick={handleLogout} style={{ padding: '8px 16px', background: '#007aff', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 500, fontSize: '14px', cursor: 'pointer', height: '40px' }}>로그아웃</button>
-      </div>
-      {/* 프로젝트 현황 */}
-      <div className="project-status">
-        <h3 className="status-title">프로젝트 현황</h3>
-        <div className="status-grid">
-          <div className="status-item">
-            <div className="status-number status-blue">{tasks.length}</div>
-            <div className="status-label">전체 작업</div>
-          </div>
-          <div className="status-item">
-            <div className="status-number status-yellow">{getColumnTasks('progress').length}</div>
-            <div className="status-label">진행 중</div>
-          </div>
-          <div className="status-item">
-            <div className="status-number status-green">{getColumnTasks('done').length}</div>
-            <div className="status-label">완료</div>
-          </div>
-          <div className="status-item">
-            <div className="status-number status-purple">
-              {tasks.length > 0 ? Math.round((getColumnTasks('done').length / tasks.length) * 100) + '%' : '0%'}
+        {/* 프로젝트 현황 */}
+        <div className="project-status">
+          <h3 className="status-title">프로젝트 현황</h3>
+          <div className="status-grid">
+            <div className="status-item">
+              <div className="status-number status-blue">{tasks.length}</div>
+              <div className="status-label">전체 작업</div>
             </div>
-            <div className="status-label">진행률</div>
-          </div>
-        </div>
-      </div>
-      {/* Kanban Board */}
-      <div className="kanban-board">
-        {columnOrder.map((col) => (
-          <div key={col} className={`column ${col}-column`}>
-            <div className="column-header">
-              <h3 className="column-title">
-                {columnTitles[col]}
-                <span className="task-count">{getColumnTasks(col).length}</span>
-              </h3>
-              {col === 'todo' && (
-                <button onClick={() => { setSelectedColumn(col); setTaskForm({ ...taskForm, status: col }); setNewTaskModal(true); }} className="add-task-btn">
-                  <Plus size={18} />
-                </button>
-              )}
+            <div className="status-item">
+              <div className="status-number status-yellow">{getColumnTasks('progress').length}</div>
+              <div className="status-label">진행 중</div>
             </div>
-            <div className="tasks-container">
-              {getColumnTasks(col).map((task) => (
-                <TaskCard key={task.taskNo} task={task} />
-              ))}
+            <div className="status-item">
+              <div className="status-number status-green">{getColumnTasks('done').length}</div>
+              <div className="status-label">완료</div>
             </div>
-          </div>
-        ))}
-      </div>
-      {/* 새 작업 추가 모달 */}
-      {newTaskModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3 className="modal-title">새 작업 추가 - {columnTitles[selectedColumn]}</h3>
-            <div className="form-container">
-              <input type="text" placeholder="작업 제목 *" value={taskForm.taskTitle} onChange={e => setTaskForm({ ...taskForm, taskTitle: e.target.value })} className="form-input" />
-              <textarea placeholder="작업 설명" value={taskForm.description} onChange={e => setTaskForm({ ...taskForm, description: e.target.value })} className="form-textarea" />
-              <input type="text" placeholder="담당자(이름 또는 ID) *" value={taskForm.assignee} onChange={e => setTaskForm({ ...taskForm, assignee: e.target.value })} className="form-input" />
-              <input type="date" value={taskForm.dueEnd} onChange={e => setTaskForm({ ...taskForm, dueEnd: e.target.value })} className="form-input" />
-              <textarea placeholder="작업 내용" value={taskForm.taskContent} onChange={e => setTaskForm({ ...taskForm, taskContent: e.target.value })} className="form-textarea" />
-            </div>
-            <div className="modal-buttons">
-              <button onClick={() => setNewTaskModal(false)} className="btn btn-secondary">취소</button>
-              <button onClick={handleAddTask} className="btn btn-primary">추가</button>
+            <div className="status-item">
+              <div className="status-number status-purple">
+                {tasks.length > 0 ? Math.round((getColumnTasks('done').length / tasks.length) * 100) + '%' : '0%'}
+              </div>
+              <div className="status-label">진행률</div>
             </div>
           </div>
         </div>
-      )}
-    </div>
+        {/* Kanban Board */}
+        <div className="kanban-board">
+          {columnOrder.map((col) => (
+              <div key={col} className={`column ${col}-column`}>
+                <div className="column-header">
+                  <h3 className="column-title">
+                    {columnTitles[col]}
+                    <span className="task-count">{getColumnTasks(col).length}</span>
+                  </h3>
+                  {col === 'todo' && (
+                      <button onClick={() => { setSelectedColumn(col); setTaskForm({ ...taskForm, status: col }); setNewTaskModal(true); }} className="add-task-btn">
+                        <Plus size={18} />
+                      </button>
+                  )}
+                </div>
+                <div className="tasks-container">
+                  {getColumnTasks(col).map((task) => (
+                      <TaskCard key={task.taskNo} task={task} />
+                  ))}
+                </div>
+              </div>
+          ))}
+        </div>
+        {/* 새 작업 추가 모달 */}
+        {newTaskModal && (
+            <div className="modal-overlay">
+              <div className="modal">
+                <h3 className="modal-title">새 작업 추가 - {columnTitles[selectedColumn]}</h3>
+                <div className="form-container">
+                  <input
+                      type="text"
+                      placeholder="작업 제목 *"
+                      value={taskForm.taskTitle}
+                      onChange={e => setTaskForm({ ...taskForm, taskTitle: e.target.value })}
+                      className="form-input"
+                  />
+                  <textarea
+                      placeholder="작업 설명"
+                      value={taskForm.description}
+                      onChange={e => setTaskForm({ ...taskForm, description: e.target.value })}
+                      className="form-textarea"
+                  />
+
+                  {/* 담당자 선택기 (슬라이드 뷰 대체) */}
+                  <div style={{ position: 'relative', width: '100%' }}>
+                    <div
+                        className="form-input" // 기존 input 스타일 재활용
+                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                        onClick={() => setShowAssigneePicker(true)}
+                    >
+                      <span>담당자: {taskForm.assignee ? taskForm.assignee : '선택하세요 *'}</span>
+                      <User size={16} />
+                    </div>
+
+                    {showAssigneePicker && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          right: 0,
+                          backgroundColor: 'white',
+                          border: '1px solid #E5E7EB',
+                          borderRadius: '8px',
+                          zIndex: 1000,
+                          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                          maxHeight: '300px',
+                          overflowY: 'auto',
+                          marginTop: '4px',
+                          padding: '8px'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>
+                            <Search size={18} style={{ marginRight: '8px', color: '#6B7280' }} />
+                            <input
+                                type="text"
+                                placeholder="담당자 검색..."
+                                value={assigneeSearchTerm}
+                                onChange={(e) => setAssigneeSearchTerm(e.target.value)}
+                                style={{ flex: 1, border: 'none', outline: 'none', fontSize: '14px' }}
+                            />
+                            <button onClick={() => setShowAssigneePicker(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280' }}>X</button>
+                          </div>
+                          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                            {projectMembers
+                                .filter(member => member.username.toLowerCase().includes(assigneeSearchTerm.toLowerCase()))
+                                .map(member => (
+                                    <li
+                                        key={member.id}
+                                        style={{
+                                          padding: '8px 12px',
+                                          cursor: 'pointer',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'space-between',
+                                          backgroundColor: taskForm.assignee === member.username ? '#E5E7EB' : 'transparent',
+                                          borderRadius: '4px'
+                                        }}
+                                        onClick={() => {
+                                          setTaskForm({ ...taskForm, assignee: member.username }); // 담당자로 username 설정
+                                          setShowAssigneePicker(false); // 선택 후 닫기
+                                          setAssigneeSearchTerm(''); // 검색어 초기화
+                                        }}
+                                    >
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <User size={16} color="#6B7280" /> {/* 실제 아바타 이미지로 교체 가능 */}
+                                        <span>{member.username}</span>
+                                      </div>
+                                      {/* 온라인 상태 표시 */}
+                                      <div style={{
+                                        width: '10px',
+                                        height: '10px',
+                                        borderRadius: '50%',
+                                        backgroundColor: connectedUsers.has(member.username) ? '#10B981' : '#6B7280' // 온라인: 초록, 오프라인: 회색
+                                      }}></div>
+                                    </li>
+                                ))}
+                            {projectMembers.length === 0 && !assigneeSearchTerm && (
+                                <li style={{ padding: '8px', textAlign: 'center', color: '#6B7280' }}>
+                                  프로젝트 멤버가 없습니다.
+                                </li>
+                            )}
+                            {projectMembers.length > 0 && filteredMembers.length === 0 && assigneeSearchTerm && (
+                                <li style={{ padding: '8px', textAlign: 'center', color: '#6B7280' }}>
+                                  "{assigneeSearchTerm}"에 해당하는 사용자가 없습니다.
+                                </li>
+                            )}
+                          </ul>
+                        </div>
+                    )}
+                  </div>
+                  {/* 기존 담당자 입력 필드는 위 담당자 선택기로 대체됨 */}
+                  {/* <input type="text" placeholder="담당자(이름 또는 ID) *" value={taskForm.assignee} onChange={e => setTaskForm({ ...taskForm, assignee: e.target.value })} className="form-input" /> */}
+
+                  <input type="date" value={taskForm.dueEnd} onChange={e => setTaskForm({ ...taskForm, dueEnd: e.target.value })} className="form-input" />
+                  <textarea placeholder="작업 내용" value={taskForm.taskContent} onChange={e => setTaskForm({ ...taskForm, taskContent: e.target.value })} className="form-textarea" />
+                </div>
+                <div className="modal-buttons">
+                  <button onClick={() => setNewTaskModal(false)} className="btn btn-secondary">취소</button>
+                  <button onClick={handleAddTask} className="btn btn-primary">추가</button>
+                </div>
+              </div>
+            </div>
+        )}
+      </div>
   );
 };
 

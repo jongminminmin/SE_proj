@@ -4,6 +4,7 @@ package ac.kr.changwon.se_proj.controller;
 import ac.kr.changwon.se_proj.dto.UserDto;
 import ac.kr.changwon.se_proj.model.CustomUserDetails;
 import ac.kr.changwon.se_proj.model.User;
+import ac.kr.changwon.se_proj.service.Interface.ChatRoomService;
 import ac.kr.changwon.se_proj.service.Interface.UserService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -23,6 +24,8 @@ import java.util.stream.Collectors;
 public class UserController {
 
     private final UserService userService;
+
+    private final ChatRoomService chatRoomService;
     // Logger 인스턴스 생성
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
@@ -126,4 +129,5 @@ public class UserController {
         logger.info("{} ID의 사용자 삭제 완료", id);
         return ResponseEntity.noContent().build();
     }
+
 }

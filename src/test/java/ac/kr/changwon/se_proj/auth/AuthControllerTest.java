@@ -20,8 +20,6 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -106,8 +104,8 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 사용자로 로그인 시도 시 실패 테스트") // UserAuthenticationIntegrationTest에서 가져온 경우
-    void testLoginWithNonExistentUser() throws Exception {       // AuthControllerTest에 맞게 이름 변경 가능
+    @DisplayName("존재하지 않는 사용자로 로그인 시도 시 실패 테스트")
+    void testLoginWithNonExistentUser() throws Exception {
         LoginRequestDTO loginDto = new LoginRequestDTO();
         String nonExistentUserId = "nonexistentuser";
         loginDto.setUserId(nonExistentUserId);
@@ -127,7 +125,6 @@ class AuthControllerTest {
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message").value("존재하지 않는 사용자 " + nonExistentUserId + " (from mock)")); // AuthController의 catch 블록에서 설정한 메시지
-        // 또는 .andExpect(jsonPath("$.message").value("존재하지 않는 사용자 " + nonExistentUserId + " (from mock)")); // 만약 e.getMessage()를 사용했다면
     }
 
     @Test
