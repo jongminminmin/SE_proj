@@ -49,7 +49,7 @@ const Task = () => {
 
   // 1. 전체 Task 불러오기
   useEffect(() => {
-    fetch('/api/tasks/getAll')
+    fetch('/api/tasks/')
         .then(res => res.json())
         .then(data => setTasks(data));
   }, []);
