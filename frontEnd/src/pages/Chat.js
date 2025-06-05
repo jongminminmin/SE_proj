@@ -254,7 +254,7 @@ const Chat = () => {
         const wsHost = window.location.hostname;
         const wsPort = process.env.REACT_APP_WS_PORT || '9443'; // .env 설정 또는 기본 9443
         const wsEndpoint = process.env.REACT_APP_WS_ENDPOINT || '/ws';
-        const brokerURL = `<span class="math-inline">\{wsProtocol\}\://</span>{wsHost}:<span class="math-inline">\{wsPort\}</span>{wsEndpoint}`;
+        const brokerURL = `${wsProtocol}://${wsHost}:${wsPort}${wsEndpoint}`;
 
         const client = new Client({
             brokerURL,
