@@ -3,7 +3,7 @@ import { Client } from '@stomp/stompjs';
 import { useNavigate } from "react-router-dom";
 import './Chat.css'; // CSS 클래스 버전을 사용한다고 가정
 
-// SVG 아이콘 컴포넌트들 (이전과 동일, className props 사용)
+// SVG 아이콘 컴포넌트들 (className props 사용)
 const Send = ({ className }) => (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -62,7 +62,7 @@ const Chat = () => {
     const [messages, setMessages] = useState({});
     const [newMessage, setNewMessage] = useState('');
     const [isConnected, setIsConnected] = useState(false);
-    const stompClientRef = useRef(null); // STOMP 클라이언트 인스턴스
+    const stompClientRef = useRef(null);
 
     const [chatRooms, setChatRooms] = useState([]);
     const [currentChatRoom, setCurrentChatRoom] = useState(null);
@@ -172,7 +172,7 @@ const Chat = () => {
                 setAllUsersError('');
                 try {
                     // 올바른 API 경로: /api/users
-                    const response = await fetch(`/api/users`);
+                    const response = await fetch(`/api/users`); // <-- 이 부분 수정: /api/chat/ 경로 제거
                     if (response.ok) {
                         const usersData = await response.json();
                         const formattedUsers = usersData.map(u => ({
@@ -225,6 +225,7 @@ const Chat = () => {
 
 
     // [수정된 부분 1]: 웹소켓 기본 연결 및 connectedUsers 구독 (currentUser만 있으면 작동)
+    // 이 useEffect는 STOMP 클라이언트의 활성화와 /topic/connectedUsers 구독을 관리합니다.
     useEffect(() => {
         // currentUser 정보가 없으면 연결 시도 안 함
         if (!currentUser || !currentUser.id) {
@@ -242,7 +243,7 @@ const Chat = () => {
         // 이 useEffect는 기본 연결과 connectedUsers 구독을 위한 것이므로, 룸 변경에 따른 재연결은 여기서 관리하지 않음.
         if (stompClientRef.current && stompClientRef.current.active &&
             stompClientRef.current.userIdBeforeDeactivation === currentUser.id) {
-            console.log("STOMP (Basic): Already connected for connectedUsers, user unchanged.");
+            console.log("STOMP (Basic): Already connected for connectedUsers, user unchanged. Skipping re-activation.");
             if (!isConnected) setIsConnected(true);
             return;
         }
@@ -253,7 +254,7 @@ const Chat = () => {
         const wsHost = window.location.hostname;
         const wsPort = process.env.REACT_APP_WS_PORT || '9443'; // .env 설정 또는 기본 9443
         const wsEndpoint = process.env.REACT_APP_WS_ENDPOINT || '/ws';
-        const brokerURL = `${wsProtocol}://${wsHost}:${wsPort}${wsEndpoint}`;
+        const brokerURL = `<span class="math-inline">\{wsProtocol\}\://</span>{wsHost}:<span class="math-inline">\{wsPort\}</span>{wsEndpoint}`;
 
         const client = new Client({
             brokerURL,
@@ -276,7 +277,7 @@ const Chat = () => {
                 client.subscribe('/topic/connectedUsers', (message) => {
                     try {
                         const updatedConnectedUsersArray = JSON.parse(message.body);
-                        setConnectedUsers(new Set(updatedConnectedUsersArray));
+                        setConnectedUsers(new Set(updatedConnectedUsersArray)); // Set으로 변환하여 상태 업데이트
                         console.log("Updated connected users via WebSocket: ", updatedConnectedUsersArray);
                     } catch (error) {
                         console.error("Failed to parse connected users update message: ", message.body, error);
@@ -311,6 +312,7 @@ const Chat = () => {
     }, [currentUser]); // currentUser가 변경될 때만 이 useEffect를 재실행
 
     // [수정된 부분 2]: 채팅방 메시지 구독 (currentChatRoom이 있을 때만)
+    // 이 useEffect는 특정 채팅방의 메시지 구독을 관리합니다.
     useEffect(() => {
         // currentChatRoom, currentUser, stompClient가 활성화되어 있지 않으면 구독하지 않음
         if (!currentUser || !currentUser.id || !currentChatRoom || !stompClientRef.current || !stompClientRef.current.active) {
@@ -444,7 +446,7 @@ const Chat = () => {
         return participants;
     };
 
-    // [수정된 부분 3]: 모든 사용자 목록 + 온라인 상태를 포함하여 사이드바에 표시할 함수
+    // 모든 사용자 목록 + 온라인 상태를 포함하여 사이드바에 표시할 함수
     const getDisplayedUsersInRightSidebar = useCallback(() => {
         if (!allUsers || allUsers.length === 0) {
             return [];
@@ -459,7 +461,6 @@ const Chat = () => {
 
         let sortedUsers = [];
         if (currentUser) {
-            // currentUser의 id와 비교할 때는 여전히 id를 사용합니다.
             const otherUsers = usersWithStatus.filter(u => u.id !== currentUser.id.toString());
             const me = usersWithStatus.find(u => u.id === currentUser.id.toString());
 
@@ -467,9 +468,8 @@ const Chat = () => {
                 sortedUsers.push({
                     ...me,
                     avatar: currentUser.avatar,
-                    // currentUser 객체의 name (username) 사용
-                    name: currentUser.name, // <-- user.username 대신 currentUser.name으로 수정
-                    status: connectedUsers.has(currentUser.name) ? 'online' : 'offline' // <-- currentUser.username 대신 currentUser.name
+                    name: currentUser.name,
+                    status: connectedUsers.has(currentUser.name) ? 'online' : 'offline'
                 });
             }
             sortedUsers = sortedUsers.concat(otherUsers);
@@ -481,8 +481,7 @@ const Chat = () => {
         sortedUsers.sort((a, b) => {
             if (a.status === 'online' && b.status !== 'online') return -1;
             if (a.status !== 'online' && b.status === 'online') return 1;
-            // [수정된 부분 4]: user.name 대신 user.username으로 정렬
-            return a.username.localeCompare(b.username);
+            return a.name.localeCompare(b.name);
         });
 
         return sortedUsers;
@@ -504,22 +503,7 @@ const Chat = () => {
                 </div>
 
                 <div className="rooms-list">
-                    {/* 로딩 중일 때 */}
-                    {chatRoomsLoading && <div className="loading-text">채팅방 로딩 중...</div>}
-
-                    {/* 에러 발생 시 */}
-                    {chatRoomsError && <div className="error-text">오류: {chatRoomsError}</div>}
-
-                    {/* 로딩 완료 후 채팅방이 없을 때 */}
-                    {!chatRoomsLoading && !chatRoomsError && chatRooms.length === 0 && (
-                        <div className="empty-rooms-message">
-                            <p>참여 중인 채팅방이 없습니다.</p>
-                            <p>새로운 채팅방을 생성하거나 프로젝트에 참여하여 채팅을 시작하세요.</p>
-                        </div>
-                    )}
-
-                    {/* 채팅방 목록이 있을 때만 맵핑하여 렌더링 */}
-                    {!chatRoomsLoading && !chatRoomsError && chatRooms.length > 0 && chatRooms.map((room) => (
+                    {chatRooms.map((room) => (
                         <div
                             key={room.id}
                             onClick={() => handleRoomChange(room.id)}
@@ -534,16 +518,40 @@ const Chat = () => {
                                         <h3 className="room-name">{room.name}</h3>
                                         {room.unreadCount > 0 && (
                                             <span className="unread-badge">
-                                {room.unreadCount}
-                            </span>
+                                                {room.unreadCount}
+                                            </span>
                                         )}
                                     </div>
-                                    <p className="room-description">{room.description}</p>
-                                    <p className="room-last-message">{room.lastMessage}</p>
-                                    <div className="room-footer">
-                                        <span className="last-message-time">{room.lastMessageTime}</span>
-                                        <div className="participants-count">
-                                            <Users className="participants-icon"/>
+                                    <p style={{
+                                        fontSize: '12px',
+                                        color: '#6B7280',
+                                        margin: '4px 0',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap'
+                                    }}>{room.description}</p>
+                                    <p style={{
+                                        fontSize: '12px',
+                                        color: '#9CA3AF',
+                                        margin: '4px 0',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap'
+                                    }}>{room.lastMessage}</p>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        marginTop: '8px'
+                                    }}>
+                                        <span style={{fontSize: '11px', color: '#9CA3AF'}}>{room.lastMessageTime}</span>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            fontSize: '11px',
+                                            color: '#9CA3AF'
+                                        }}>
+                                            <Users style={{width: '12px', height: '12px', marginRight: '4px'}}/>
                                             {room.participants}
                                         </div>
                                     </div>
@@ -590,8 +598,12 @@ const Chat = () => {
                             <div className="empty-chat-avatar" style={{backgroundColor: getCurrentRoom()?.color}}>
                                 <Hash className="empty-chat-icon"/>
                             </div>
-                            <h3 className="empty-chat-title">{getCurrentRoom()?.name}</h3>
-                            <p className="empty-chat-description">
+                            <h3 style={{
+                                fontSize: '16px',
+                                fontWeight: '600',
+                                margin: 0
+                            }}>{getCurrentRoom()?.name}</h3>
+                            <p style={{fontSize: '14px', textAlign: 'center', lineHeight: '1.5'}}>
                                 {getCurrentRoom()?.description}<br/>
                                 팀원들과 소통을 시작해보세요.
                             </p>
@@ -612,9 +624,18 @@ const Chat = () => {
                                                 <span className="message-sender">{message.sender}</span>
                                             )}
                                             <div className={`message-bubble ${message.isOwn ? 'own-bubble' : 'other-bubble'}`}>
-                                                <p className="message-text">{message.content}</p>
+                                                <p style={{
+                                                    fontSize: '14px',
+                                                    lineHeight: '1.5',
+                                                    margin: 0
+                                                }}>{message.content}</p>
                                             </div>
-                                            <span className="message-time">{message.time}</span>
+                                            <span style={{
+                                                fontSize: '11px',
+                                                color: '#9CA3AF',
+                                                marginTop: '4px',
+                                                paddingLeft: '4px'
+                                            }}>{message.time}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -631,12 +652,9 @@ const Chat = () => {
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
                             onKeyPress={handleKeyPress}
-                            //currentChatRoom이 null이면 플레이스홀더변걍
-                            placeholder={currentUser ? `${getCurrentRoom()?.name}}에 메시지 보내기...` : "메시지를 보낼 채팅방 선택하거나 생성하세요..."}
+                            placeholder={`${getCurrentRoom()?.name}에 메시지 보내기...`}
                             className="message-input"
                             rows="1"
-                            //currentChatRoom이 null이면 비활성화
-                            disabled={!currentChatRoom}
                         />
 
                         <button className="input-action-button">
@@ -654,20 +672,18 @@ const Chat = () => {
                 </div>
             </div>
 
-            {/* 오른쪽 사이드 바 - 모든 사용자 목록 (온라인 상태 포함)*/}
+            {/* 오른쪽 사이드바 - 현재 채팅방 참여자 */}
             {isRightSidebarOpen && (
                 <div className="right-sidebar">
                     <div className="participants-header">
                         <div className="participants-info">
-                            {/* 텍스트 변경: "참여자" -> "모든 사용자" 또는 "사용자" */}
-                            <h3 className="participants-title">모든 사용자</h3>
-                            {/* 현재 사이드바에 표시되는 사용자 수를 getDisplayedUsersInRightSidebar().length로 표시 */}
-                            <p className="participants-count">{getDisplayedUsersInRightSidebar().length}명</p>
+                            <h3 className="participants-title">참여자</h3>
+                            <p className="participants-count">{getCurrentParticipants().length}명</p>
                         </div>
                         <button
                             onClick={() => setIsRightSidebarOpen(false)}
                             className="close-sidebar-button"
-                            title="사용자 목록 닫기" // 툴팁 텍스트 변경
+                            title="참여자 목록 닫기"
                         >
                             <ChevronRight className="close-sidebar-icon"/>
                         </button>
@@ -675,25 +691,21 @@ const Chat = () => {
 
                     <div className="participants-list">
                         <div className="participants-grid">
-                            {/* getCurrentParticipants() 대신 getDisplayedUsersInRightSidebar() 사용 */}
-                            {getDisplayedUsersInRightSidebar().map((user) => (
+                            {getCurrentParticipants().map((user) => (
                                 <div key={user.id} className="participant-item">
                                     <div className="participant-avatar-container">
-                                        <img src={user.avatar} alt={user.username} className="participant-avatar"/>
-                                        <div className={`participant-status ${user.status === 'online' ? 'online' : 'offline'}`}></div>
+                                        <img src={user.avatar} alt={user.name} className="participant-avatar"/>
+                                        <div className={`participant-status ${user.status || 'offline'}`}></div>
                                     </div>
                                     <div className="participant-info">
-                                        <p className="participant-name">{user.username}</p> {/* user.name 대신 user.username 사용 */}
-                                        <p className="participant-status-text">
-                                            {/* user.status는 'online' 또는 'offline'이므로 조건 변경 */}
-                                            {user.status === 'online' ? '온라인' : '오프라인'}
+                                        <p className="participant-name">{user.name}</p>
+                                        <p style={{fontSize: '12px', color: '#6B7280', margin: 0}}>
+                                            {user.status === 'online' ? '온라인' :
+                                                user.status === 'away' ? '자리비움' : '오프라인'}
                                         </p>
                                     </div>
                                 </div>
                             ))}
-                            {/* 로딩 및 에러 메시지 추가 (getDisplayedUsersInRightSidebar 함수에 사용된 allUsersLoading/allUsersError 상태 참조) */}
-                            {allUsersLoading && <div className="loading-text">사용자 목록 로딩 중...</div>}
-                            {allUsersError && <div className="error-text">오류: {allUsersError}</div>}
                         </div>
                     </div>
                 </div>
@@ -705,11 +717,11 @@ const Chat = () => {
                     <button
                         onClick={() => setIsRightSidebarOpen(true)}
                         className="toggle-button"
-                        title="사용자 목록 열기" // 툴팁 텍스트 변경
+                        title="참여자 목록 열기"
                     >
                         <ChevronLeft className="toggle-icon"/>
                     </button>
-                    <div className="toggle-text">사용자</div> {/* 텍스트 변경 */}
+                    <div className="toggle-text">참여자</div>
                 </div>
             )}
         </div>
