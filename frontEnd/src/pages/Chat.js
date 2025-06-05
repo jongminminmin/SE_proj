@@ -1,4 +1,4 @@
-import React, {useState, useRef, useEffect, useCallback} from 'react'; // use 훅 제거
+import React, {useState, useRef, useEffect, useCallback} from 'react';
 import { Client } from '@stomp/stompjs';
 import { useNavigate } from "react-router-dom";
 import './Chat.css'; // CSS 클래스 버전을 사용한다고 가정
@@ -62,7 +62,7 @@ const Chat = () => {
     const [messages, setMessages] = useState({});
     const [newMessage, setNewMessage] = useState('');
     const [isConnected, setIsConnected] = useState(false);
-    const stompClientRef = useRef(null);
+    const stompClientRef = useRef(null); // STOMP 클라이언트 인스턴스
 
     const [chatRooms, setChatRooms] = useState([]);
     const [currentChatRoom, setCurrentChatRoom] = useState(null);
@@ -111,7 +111,7 @@ const Chat = () => {
                     console.log(`Fetched current user: ${userData.username} (ID: ${userData.id})`);
                     setCurrentUser({
                         id: userData.id,
-                        name: userData.username,
+                        name: userData.username, // userData.username을 name으로 설정
                         avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=40&h=40&fit=crop&crop=face'
                     });
                     setUserFetchError('');
@@ -147,7 +147,7 @@ const Chat = () => {
                                 setCurrentChatRoom(roomsData[0].id);
                             }
                         } else {
-                            setCurrentChatRoom(null);
+                            setCurrentChatRoom(null); // 채팅방이 없으면 현재 선택된 방을 null로 설정
                         }
                     } else {
                         console.error("Failed to fetch chat rooms:", response.status);
@@ -172,7 +172,7 @@ const Chat = () => {
                 setAllUsersError('');
                 try {
                     // 올바른 API 경로: /api/users
-                    const response = await fetch(`/api/users`); // <-- 이 부분 수정
+                    const response = await fetch(`/api/users`);
                     if (response.ok) {
                         const usersData = await response.json();
                         const formattedUsers = usersData.map(u => ({
@@ -223,145 +223,162 @@ const Chat = () => {
         }
     }, [currentChatRoom, currentUser]);
 
-    // STOMP 웹소켓 연결
+
+    // [수정된 부분 1]: 웹소켓 기본 연결 및 connectedUsers 구독 (currentUser만 있으면 작동)
     useEffect(() => {
-        if (!currentUser || !currentUser.id || !currentChatRoom) {
+        // currentUser 정보가 없으면 연결 시도 안 함
+        if (!currentUser || !currentUser.id) {
+            // 기존 연결이 있다면 비활성화
             if (stompClientRef.current && stompClientRef.current.active) {
+                console.log("STOMP (Basic): Deactivating existing client due to missing user info.");
                 stompClientRef.current.deactivate();
+                stompClientRef.current = null; // 클라이언트 비활성화 시 참조 제거
             }
             setIsConnected(false);
             return;
         }
 
-        const selectedRoomObject = chatRooms.find(room => room.id === currentChatRoom);
-        if (!selectedRoomObject) {
-            console.warn(`STOMP: Room data not found in local state for currentChatRoom: ${currentChatRoom}. Connection deferred.`);
+        // 이미 연결되어 있고, 사용자 변경이 없으면 재연결 불필요 (userIdBeforeDeactivation로 사용자 변경 감지)
+        // 이 useEffect는 기본 연결과 connectedUsers 구독을 위한 것이므로, 룸 변경에 따른 재연결은 여기서 관리하지 않음.
+        if (stompClientRef.current && stompClientRef.current.active &&
+            stompClientRef.current.userIdBeforeDeactivation === currentUser.id) {
+            console.log("STOMP (Basic): Already connected for connectedUsers, user unchanged.");
+            if (!isConnected) setIsConnected(true);
             return;
         }
 
-        const intRoomIdForSubscription = selectedRoomObject.intId;
-        if (stompClientRef.current && stompClientRef.current.active) {
-            // 방이 변경되었거나 사용자가 변경된 경우 기존 연결 해제 후 새 연결
-            if (stompClientRef.current.roomIdBeforeDeactivation !== currentChatRoom ||
-                stompClientRef.current.userIdBeforeDeactivation !== currentUser.id) {
-                console.log(`Deactivating existing STOMP client for room: ${stompClientRef.current.roomIdBeforeDeactivation} user: ${stompClientRef.current.userIdBeforeDeactivation}`);
-                stompClientRef.current.deactivate();
-            } else {
-                // 이미 올바른 방/사용자로 연결되어 있다면 추가 작업 불필요
-                console.log("STOMP: Already connected to the correct room and user.");
-                if (!isConnected) setIsConnected(true);
-                return;
-            }
-        }
-
-        console.log(`STOMP: Attempting to connect for room ${currentChatRoom} (intId: ${intRoomIdForSubscription}) user ${currentUser.id}`);
+        console.log(`STOMP (Basic): Attempting to connect for connectedUsers as user: ${currentUser.id}`);
 
         const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         const wsHost = window.location.hostname;
-        const wsPort = process.env.REACT_APP_WS_PORT || '9443';
+        const wsPort = process.env.REACT_APP_WS_PORT || '9443'; // .env 설정 또는 기본 9443
         const wsEndpoint = process.env.REACT_APP_WS_ENDPOINT || '/ws';
         const brokerURL = `${wsProtocol}://${wsHost}:${wsPort}${wsEndpoint}`;
 
         const client = new Client({
             brokerURL,
             connectHeaders: {
-                username: currentUser.name, // 백엔드 WebSocketConfig와 일치하도록 userId -> username 변경
+                username: currentUser.name, // 백엔드 WebSocketConfig와 일치하도록 username 사용
             },
             debug: (str) => {
-                console.log(new Date(), 'STOMP DEBUG: ', str);
+                console.log(new Date(), 'STOMP DEBUG (Basic): ', str);
             },
             reconnectDelay: 5000,
             heartbeatIncoming: 4000,
             heartbeatOutgoing: 4000,
             onConnect: (frame) => {
                 setIsConnected(true);
-                stompClientRef.current = client;
-                stompClientRef.current.roomIdBeforeDeactivation = currentChatRoom;
-                stompClientRef.current.userIdBeforeDeactivation = currentUser.id;
-                console.log(`STOMP Connected (room string ID: ${currentChatRoom}, intID: ${intRoomIdForSubscription}) as user: ${currentUser.id}`, frame);
+                stompClientRef.current = client; // Ref 업데이트
+                stompClientRef.current.userIdBeforeDeactivation = currentUser.id; // 사용자 정보 저장
+                console.log(`STOMP (Basic) Connected as user: ${currentUser.id}`, frame);
 
-                // 웹소켓 연결 사용자 목록 구독 추가
+                // connectedUsers 토픽 구독 (연결 시마다 구독)
                 client.subscribe('/topic/connectedUsers', (message) => {
                     try {
                         const updatedConnectedUsersArray = JSON.parse(message.body);
-                        setConnectedUsers(new Set(updatedConnectedUsersArray)); // Set으로 변환하여 상태 업데이트
+                        setConnectedUsers(new Set(updatedConnectedUsersArray));
                         console.log("Updated connected users via WebSocket: ", updatedConnectedUsersArray);
                     } catch (error) {
                         console.error("Failed to parse connected users update message: ", message.body, error);
                     }
                 });
                 console.log("Subscribed to /topic/connectedUsers for real-time updates.");
-
-                let subscriptionDestination;
-                if (intRoomIdForSubscription <= PRIVATE_ROOM_MAX_ID_FROM_SERVER) {
-                    subscriptionDestination = `/topic/private/${intRoomIdForSubscription}`;
-                } else {
-                    subscriptionDestination = `/topic/group/${intRoomIdForSubscription}`;
-                }
-
-                client.subscribe(subscriptionDestination, (message) => {
-                    try {
-                        const receivedMsg = JSON.parse(message.body);
-                        console.log(`Message received for room ${currentChatRoom} (subscribed to ${subscriptionDestination}):`, receivedMsg);
-                        const messageToStore = {
-                            id: receivedMsg.messageId || receivedMsg.id || Date.now(),
-                            sender: receivedMsg.username || 'Unknown',
-                            senderId: receivedMsg.senderId,
-                            content: receivedMsg.content,
-                            time: receivedMsg.timestamp ? new Date(receivedMsg.timestamp).toLocaleTimeString('ko-KR', {
-                                hour: 'numeric',
-                                minute: '2-digit',
-                                hour12: true
-                            }) : new Date().toLocaleTimeString('ko-KR', {
-                                hour: 'numeric',
-                                minute: '2-digit',
-                                hour12: true
-                            }),
-                            isOwn: receivedMsg.senderId === currentUser.id.toString(),
-                            avatar: receivedMsg.avatar || (receivedMsg.senderId === currentUser.id.toString() ? currentUser.avatar : 'https://via.placeholder.com/40'),
-                        };
-
-                        setMessages(prevMessages => {
-                            const currentRoomMessages = prevMessages[currentChatRoom] || [];
-                            if (currentRoomMessages.find(msg => msg.id === messageToStore.id)) {
-                                return prevMessages;
-                            }
-                            return {
-                                ...prevMessages,
-                                [currentChatRoom]: [...currentRoomMessages, messageToStore]
-                            };
-                        });
-                    } catch (error) {
-                        console.error("Failed to parse STOMP message:", message.body, error);
-                    }
-                });
-
-                console.log(`Subscribed to ${subscriptionDestination}`);
             },
             onStompError: (frame) => {
-                console.error('STOMP: Broker reported error: ' + frame.headers['message'], frame.body);
+                console.error('STOMP (Basic): Broker reported error: ' + frame.headers['message'], frame.body);
                 setIsConnected(false);
             },
             onWebSocketClose: (event) => {
-                console.log('STOMP: WebSocket closed.', event);
+                console.log('STOMP (Basic): WebSocket closed.', event);
                 setIsConnected(false);
             },
             onDisconnect: (frame) => {
-                console.log('STOMP: Client disconnected.', frame);
+                console.log('STOMP (Basic): Client disconnected.', frame);
                 setIsConnected(false);
             }
         });
 
         client.activate();
 
+        // Cleanup 함수: 컴포넌트 언마운트 시 또는 currentUser가 변경되어 이 useEffect가 재실행될 때 기존 클라이언트 비활성화
         return () => {
-            if (client && client.active) {
-                console.log(`Deactivating STOMP client for room: ${currentChatRoom} (or ${stompClientRef.current?.roomIdBeforeDeactivation}) user: ${currentUser.id} during cleanup.`);
-                client.deactivate();
-                stompClientRef.current = null;
+            if (stompClientRef.current && stompClientRef.current.active) {
+                console.log(`Deactivating STOMP client (Basic) for user: ${currentUser.id} during cleanup.`);
+                stompClientRef.current.deactivate();
+                stompClientRef.current = null; // 참조 초기화
             }
         };
-    }, [currentChatRoom, currentUser, chatRooms]);
+    }, [currentUser]); // currentUser가 변경될 때만 이 useEffect를 재실행
+
+    // [수정된 부분 2]: 채팅방 메시지 구독 (currentChatRoom이 있을 때만)
+    useEffect(() => {
+        // currentChatRoom, currentUser, stompClient가 활성화되어 있지 않으면 구독하지 않음
+        if (!currentUser || !currentUser.id || !currentChatRoom || !stompClientRef.current || !stompClientRef.current.active) {
+            // 이전 구독이 있다면 여기서 해제될 수 있도록 return
+            return;
+        }
+
+        const selectedRoomObject = chatRooms.find(room => room.id === currentChatRoom);
+        if (!selectedRoomObject) {
+            console.warn(`STOMP: Room data not found in local state for currentChatRoom: ${currentChatRoom}. Message subscription deferred.`);
+            return;
+        }
+
+        const intRoomIdForSubscription = selectedRoomObject.intId;
+        const subscriptionDestination = intRoomIdForSubscription <= PRIVATE_ROOM_MAX_ID_FROM_SERVER
+            ? `/topic/private/${intRoomIdForSubscription}`
+            : `/topic/group/${intRoomIdForSubscription}`;
+
+        console.log(`STOMP: Subscribing to messages for room ${currentChatRoom} at ${subscriptionDestination}`);
+
+        // [중요] 기존 구독 해제: 방이 바뀌거나 언마운트될 때 기존 구독을 해제해야 중복 메시지를 받지 않음
+        // stompClientRef.current는 이미 첫 번째 useEffect에서 활성화된 상태여야 함.
+        const subscription = stompClientRef.current.subscribe(subscriptionDestination, (message) => {
+            try {
+                const receivedMsg = JSON.parse(message.body);
+                console.log(`Message received for room ${currentChatRoom} (subscribed to ${subscriptionDestination}):`, receivedMsg);
+                const messageToStore = {
+                    id: receivedMsg.messageId || receivedMsg.id || Date.now(),
+                    sender: receivedMsg.username || 'Unknown',
+                    senderId: receivedMsg.senderId,
+                    content: receivedMsg.content,
+                    time: receivedMsg.timestamp ? new Date(receivedMsg.timestamp).toLocaleTimeString('ko-KR', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    }) : new Date().toLocaleTimeString('ko-KR', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    }),
+                    isOwn: receivedMsg.senderId === currentUser.id.toString(),
+                    avatar: receivedMsg.avatar || (receivedMsg.senderId === currentUser.id.toString() ? currentUser.avatar : 'https://via.placeholder.com/40'),
+                };
+
+                setMessages(prevMessages => {
+                    const currentRoomMessages = prevMessages[currentChatRoom] || [];
+                    if (currentRoomMessages.find(msg => msg.id === messageToStore.id)) {
+                        return prevMessages;
+                    }
+                    return {
+                        ...prevMessages,
+                        [currentChatRoom]: [...currentRoomMessages, messageToStore]
+                    };
+                });
+            } catch (error) {
+                console.error("Failed to parse STOMP message:", message.body, error);
+            }
+        });
+
+        // Cleanup 함수: 현재 채팅방이 변경되거나 컴포넌트 언마운트 시 기존 구독 해제
+        return () => {
+            if (stompClientRef.current && stompClientRef.current.active) {
+                console.log(`Unsubscribing from ${subscriptionDestination}`);
+                subscription.unsubscribe(); // 특정 구독만 해제
+            }
+        };
+    }, [currentChatRoom, currentUser, chatRooms, isConnected]); // isConnected도 의존성 추가
+
 
     const handleSendMessage = () => {
         const selectedRoom = chatRooms.find(room => room.id === currentChatRoom);
@@ -427,7 +444,7 @@ const Chat = () => {
         return participants;
     };
 
-    // 모든 사용자 목록 + 온라인 상태를 포함하여 사이드바에 표시할 함수
+    // [수정된 부분 3]: 모든 사용자 목록 + 온라인 상태를 포함하여 사이드바에 표시할 함수
     const getDisplayedUsersInRightSidebar = useCallback(() => {
         if (!allUsers || allUsers.length === 0) {
             return [];
@@ -442,6 +459,7 @@ const Chat = () => {
 
         let sortedUsers = [];
         if (currentUser) {
+            // currentUser의 id와 비교할 때는 여전히 id를 사용합니다.
             const otherUsers = usersWithStatus.filter(u => u.id !== currentUser.id.toString());
             const me = usersWithStatus.find(u => u.id === currentUser.id.toString());
 
@@ -449,8 +467,9 @@ const Chat = () => {
                 sortedUsers.push({
                     ...me,
                     avatar: currentUser.avatar,
-                    name: currentUser.username,
-                    status: connectedUsers.has(currentUser.username) ? 'online' : 'offline'
+                    // currentUser 객체의 name (username) 사용
+                    name: currentUser.name, // <-- user.username 대신 currentUser.name으로 수정
+                    status: connectedUsers.has(currentUser.name) ? 'online' : 'offline' // <-- currentUser.username 대신 currentUser.name
                 });
             }
             sortedUsers = sortedUsers.concat(otherUsers);
@@ -462,6 +481,7 @@ const Chat = () => {
         sortedUsers.sort((a, b) => {
             if (a.status === 'online' && b.status !== 'online') return -1;
             if (a.status !== 'online' && b.status === 'online') return 1;
+            // [수정된 부분 4]: user.name 대신 user.username으로 정렬
             return a.username.localeCompare(b.username);
         });
 
@@ -484,7 +504,22 @@ const Chat = () => {
                 </div>
 
                 <div className="rooms-list">
-                    {chatRooms.map((room) => (
+                    {/* 로딩 중일 때 */}
+                    {chatRoomsLoading && <div className="loading-text">채팅방 로딩 중...</div>}
+
+                    {/* 에러 발생 시 */}
+                    {chatRoomsError && <div className="error-text">오류: {chatRoomsError}</div>}
+
+                    {/* 로딩 완료 후 채팅방이 없을 때 */}
+                    {!chatRoomsLoading && !chatRoomsError && chatRooms.length === 0 && (
+                        <div className="empty-rooms-message">
+                            <p>참여 중인 채팅방이 없습니다.</p>
+                            <p>새로운 채팅방을 생성하거나 프로젝트에 참여하여 채팅을 시작하세요.</p>
+                        </div>
+                    )}
+
+                    {/* 채팅방 목록이 있을 때만 맵핑하여 렌더링 */}
+                    {!chatRoomsLoading && !chatRoomsError && chatRooms.length > 0 && chatRooms.map((room) => (
                         <div
                             key={room.id}
                             onClick={() => handleRoomChange(room.id)}
@@ -499,8 +534,8 @@ const Chat = () => {
                                         <h3 className="room-name">{room.name}</h3>
                                         {room.unreadCount > 0 && (
                                             <span className="unread-badge">
-                                                {room.unreadCount}
-                                            </span>
+                                {room.unreadCount}
+                            </span>
                                         )}
                                     </div>
                                     <p className="room-description">{room.description}</p>
@@ -596,9 +631,12 @@ const Chat = () => {
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
                             onKeyPress={handleKeyPress}
-                            placeholder={`${getCurrentRoom()?.name}에 메시지 보내기...`}
+                            //currentChatRoom이 null이면 플레이스홀더변걍
+                            placeholder={currentUser ? `${getCurrentRoom()?.name}}에 메시지 보내기...` : "메시지를 보낼 채팅방 선택하거나 생성하세요..."}
                             className="message-input"
                             rows="1"
+                            //currentChatRoom이 null이면 비활성화
+                            disabled={!currentChatRoom}
                         />
 
                         <button className="input-action-button">
@@ -645,7 +683,7 @@ const Chat = () => {
                                         <div className={`participant-status ${user.status === 'online' ? 'online' : 'offline'}`}></div>
                                     </div>
                                     <div className="participant-info">
-                                        <p className="participant-name">{user.username}</p>
+                                        <p className="participant-name">{user.username}</p> {/* user.name 대신 user.username 사용 */}
                                         <p className="participant-status-text">
                                             {/* user.status는 'online' 또는 'offline'이므로 조건 변경 */}
                                             {user.status === 'online' ? '온라인' : '오프라인'}

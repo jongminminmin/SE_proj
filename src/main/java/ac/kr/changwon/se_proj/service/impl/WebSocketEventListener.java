@@ -15,44 +15,55 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 @RequiredArgsConstructor
 public class WebSocketEventListener {
 
-        private static final Logger logger = LoggerFactory.getLogger(WebSocketEventListener.class);
 
-        private final SimpMessageSendingOperations messagingTemplate;
-        private final WebSocketSessionTracker sessionTracker;
+    private static final Logger logger = LoggerFactory.getLogger(WebSocketEventListener.class);
 
-        @EventListener
-        public void handleWebSocketConnectListener(SessionConnectedEvent event) {
-            StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
-            String connectedUsername = headerAccessor.getUser().getName();
+    private final SimpMessageSendingOperations messagingTemplate;
+    private final WebSocketSessionTracker sessionTracker;
 
-            if(connectedUsername == null){
-                logger.warn("WebSocket connected, but username not found in Principal for session {}. This user will not be tracked.", headerAccessor.getSessionId());
-                return;
-            }
+    @EventListener
+    public void handledWebSocketConnectListener(SessionConnectedEvent event) {
+        StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
+        String connectedUsername = null;
 
-            logger.info("User Connected: {}. Total connected: {}", connectedUsername, sessionTracker.getConnectedUsers().size());
-
-
-            //연결된 사용자 목록 업데이트를 모든 클라이언트에게 보냄.
-            messagingTemplate.convertAndSend("/topic/connectedUsers", sessionTracker.getConnectedUsers());
+        //널포인트익셉션 방지 및 사용자 이름 추출
+        if(headerAccessor.getUser() != null){
+            connectedUsername = headerAccessor.getUser().getName();
         }
 
-
-        @EventListener
-        public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
-            StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
-            String disconnectedUsername = headerAccessor.getUser() != null ? headerAccessor.getUser().getName() : null;
-
-
-            if(disconnectedUsername == null){
-                logger.warn("WebSocket disconnected, but username not found in Principal for session {}", headerAccessor.getSessionId());
-
-                return;
-            }
-
-            logger.info("User disconnected: {}. Total disconnected: {}", disconnectedUsername, sessionTracker.getConnectedUsers().size());
-
-            messagingTemplate.convertAndSend("/topic/connectedUsers", sessionTracker.getConnectedUsers());
-
+        if(connectedUsername == null){
+            logger.warn("WebSocket connected, but username not found in Principal for session {}. This user will not be traker", headerAccessor.getSessionId());
+            return;
         }
+
+        //세션 트래커에 사용자 추가
+        sessionTracker.addConnectedUser(connectedUsername);
+
+        logger.info("WebSocket connected, username={}", connectedUsername);
+
+        //연결된 사용자 목록 업데이트를 모든 클라이언트에게 브로드캐스팅
+        //사용자가 추가된 후 최신 목록 발행
+        messagingTemplate.convertAndSend("/topic/connectedUsers", sessionTracker.getConnectedUsers());
+    }
+
+
+    @EventListener
+    public void handledWebSocketDisconnectListener(SessionDisconnectEvent event) {
+        StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
+        String disconnectedUsername = null;
+
+        //널포인트익셉션 방지 및 사용자 이름 추출
+        if(headerAccessor.getUser() != null){
+            disconnectedUsername = headerAccessor.getUser().getName();
+        }
+
+        if( disconnectedUsername == null){
+            logger.warn(" WebSocket disconnected, but username not found in Principal for session {}", headerAccessor.getSessionId());
+            return;
+        }
+
+        sessionTracker.removeConnectedUser(disconnectedUsername);
+        logger.info("WebSocket disconnected, username={} Total connected: {}", disconnectedUsername, sessionTracker.getConnectedUsers().size() );
+        messagingTemplate.convertAndSend("/topic/connectedUsers", sessionTracker.getConnectedUsers());
+    }
 }

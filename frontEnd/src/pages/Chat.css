@@ -654,4 +654,36 @@
         min-width: 200px;
         margin-right: 8px;
     }
+
+    .empty-rooms-message {
+        text-align: center;
+        padding: 20px;
+        color: #6B7280;
+        font-size: 14px;
+        line-height: 1.6;
+        background-color: #F3F4F6;
+        border-radius: 8px;
+        margin: 16px;
+    }
+
+    .empty-rooms-message p{
+        margin: 0 0 8px 0;
+    }
+
+    .empty-rooms-message p:last-child {
+        margin-bottom: 0;
+    }
+
+    /* 기존 .loading-text, .error-text도 확인하여 일관성 유지 */
+    .loading-text {
+        text-align: center;
+        padding: 16px;
+        color: #6B7280;
+    }
+
+    .error-text {
+        text-align: center;
+        padding: 16px;
+        color: #EF4444; /* 빨간색으로 에러 표시 */
+    }
 }

@@ -2,11 +2,9 @@ package ac.kr.changwon.se_proj.service.impl;
 
 
 import lombok.Getter;
-import org.springframework.context.event.EventListener;
-import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.socket.messaging.SessionConnectedEvent;
-import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,22 +14,26 @@ import java.util.concurrent.ConcurrentHashMap;
 public class WebSocketSessionTracker {
 
     private final Set<String> connectedUsers = ConcurrentHashMap.newKeySet();
+    private final static Logger logger = LoggerFactory.getLogger(WebSocketSessionTracker.class);
 
-    @EventListener
-    public void handleSessionConnected(SessionConnectedEvent event) {
-        StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
-        if(accessor.getUser() != null){
-            connectedUsers.add(accessor.getUser().getName());
-        }
+
+    public void addConnectedUser(String username) {
+        if(username != null){
+            connectedUsers.add(username);
+            logger.info("User added to connected users: {}. Current total: {}", username, connectedUsers.size() );        }
     }
 
-    @EventListener
-    public void handleSessionDisconnect(SessionDisconnectEvent event) {
-        StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
-        if(accessor.getUser() != null){
-            connectedUsers.remove(accessor.getUser().getName());
-        }
-
+    public void removeConnectedUser(String username) {
+        if(username != null)
+            connectedUsers.remove(username);
+        logger.info("User removed from connected users: {}. Current total: {}", username, connectedUsers.size() );
     }
 
+    //외부에서 set을 직접 수정하는 것을 방지하기 위해 복사본 반환
+    public Set<String> getConnectedUsers() {
+        Set<String> copy = ConcurrentHashMap.newKeySet(connectedUsers.size());
+        copy.addAll(connectedUsers);
+
+        return copy;
+    }
 }
