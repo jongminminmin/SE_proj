@@ -1,7 +1,7 @@
 import React, {useState, useRef, useEffect, useCallback} from 'react';
 import { Client } from '@stomp/stompjs';
 import { useNavigate } from "react-router-dom";
-import './Chat.css'; // CSS 클래스 버전을 사용한다고 가정
+import './Chat.css';
 
 // SVG 아이콘 컴포넌트들 (className props 사용)
 const Send = ({ className }) => (
@@ -58,11 +58,65 @@ const ChevronRight = ({ className }) => (
 
 const PRIVATE_ROOM_MAX_ID_FROM_SERVER = 10;
 
+
+// getDisplayedUsersInRightSidebarWithProvidedArray 함수는 컴포넌트 밖으로 분리되어야 합니다.
+// Chat 컴포넌트 외부에 정의되어 있어야 합니다.
+const getDisplayedUsersInRightSidebarWithProvidedArray = (providedConnectedUsersArray, allUsers, currentUser) => {
+    if (!allUsers || allUsers.length === 0) {
+        return [];
+    }
+
+    const usersWithStatus = allUsers.map(u => {
+        const uUsernameLower = u.username ? u.username.toLowerCase() : '';
+        const isOnline = providedConnectedUsersArray.some(connectedUsername =>
+            connectedUsername && connectedUsername.toLowerCase() === uUsernameLower
+        );
+        return {
+            ...u,
+            status: isOnline ? 'online' : 'offline',
+            avatar: u.avatar || 'https://via.placeholder.com/32/CCCCCC/FFFFFF/?text=' + u.username.charAt(0).toUpperCase()
+        };
+    });
+
+    let sortedUsers = [];
+    if (currentUser) {
+        const currentUserNameLower = currentUser.name ? currentUser.name.toLowerCase() : '';
+        const otherUsers = usersWithStatus.filter(u => u.id !== currentUser.id.toString());
+        const me = usersWithStatus.find(u => u.id === currentUser.id.toString());
+
+        if (me) {
+            const isCurrentUserOnline = providedConnectedUsersArray.some(connectedUsername =>
+                connectedUsername && connectedUsername.toLowerCase() === currentUserNameLower
+            );
+            sortedUsers.push({
+                ...me,
+                avatar: currentUser.avatar,
+                name: currentUser.name,
+                status: isCurrentUserOnline ? 'online' : 'offline'
+            });
+        }
+        sortedUsers = sortedUsers.concat(otherUsers);
+    } else {
+        sortedUsers = usersWithStatus;
+    }
+
+    sortedUsers.sort((a, b) => {
+        if (a.status === 'online' && b.status !== 'online') return -1;
+        if (a.status !== 'online' && b.status === 'online') return 1;
+        const aUsername = a.username || '';
+        const bUsername = b.username || '';
+        return aUsername.localeCompare(bUsername);
+    });
+
+    return sortedUsers;
+};
+
+
 const Chat = () => {
     const [messages, setMessages] = useState({});
     const [newMessage, setNewMessage] = useState('');
     const [isConnected, setIsConnected] = useState(false);
-    const stompClientRef = useRef(null);
+    const stompClientRef = useRef(null); // useRef 사용
 
     const [chatRooms, setChatRooms] = useState([]);
     const [currentChatRoom, setCurrentChatRoom] = useState(null);
@@ -72,7 +126,6 @@ const Chat = () => {
     const [chatRoomsError, setChatRoomsError] = useState('');
     const [participantsLoading, setParticipantsLoading] = useState(false);
 
-    // 전체 사용자 목록 관련
     const [allUsers, setAllUsers] = useState([]);
     const [allUsersLoading, setAllUsersLoading] = useState(false);
     const [allUsersError, setAllUsersError] = useState('');
@@ -84,11 +137,9 @@ const Chat = () => {
 
     const messagesEndRef = useRef(null);
 
-    // 웹소켓 연결 확인 (Connected Users) 상태
-    const [connectedUsers, setConnectedUsers] = useState(new Set());
+    const [connectedUsers, setConnectedUsers] = useState([]);
 
 
-    // 스크롤 핸들러
     const scrollToBottom = useCallback(() => {
         messagesEndRef.current?.scrollIntoView({behavior: "smooth"});
     }, []);
@@ -97,7 +148,6 @@ const Chat = () => {
         scrollToBottom();
     }, [messages, currentChatRoom, scrollToBottom]);
 
-    // 현재 사용자 정보 가져오기
     useEffect(() => {
         const fetchCurrentUser = async () => {
             try {
@@ -105,13 +155,14 @@ const Chat = () => {
                 if (response.ok) {
                     const userData = await response.json();
                     if (response.redirected && response.url.includes('/login')) {
+                        console.log("로그인 페이지로 리디렉션됨. 로그인 페이지로 이동합니다.");
                         navigate('/login');
                         return;
                     }
-                    console.log(`Fetched current user: ${userData.username} (ID: ${userData.id})`);
+                    console.log(`현재 사용자 정보 로드 성공: ${userData.username} (ID: ${userData.id})`);
                     setCurrentUser({
                         id: userData.id,
-                        name: userData.username, // userData.username을 name으로 설정
+                        name: userData.username,
                         avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=40&h=40&fit=crop&crop=face'
                     });
                     setUserFetchError('');
@@ -120,17 +171,17 @@ const Chat = () => {
                     navigate('/login');
                 } else {
                     const errorText = await response.text();
-                    setUserFetchError(`사용자 정보 로딩 실패 ${response.status}: ${errorText}`);
+                    setUserFetchError(`사용자 정보 로딩 실패 (${response.status}): ${errorText}`);
+                    console.error(`사용자 정보 로딩 실패 ${response.status}: ${errorText}`);
                 }
             } catch (error) {
                 setUserFetchError('네트워크 오류로 사용자 정보를 가져올 수 없습니다.');
-                console.error('Network error fetching current user:', error);
+                console.error('네트워크 오류로 현재 사용자 정보를 가져올 수 없습니다:', error);
             }
         };
         fetchCurrentUser();
     }, [navigate]);
 
-    // 채팅방 목록 조회
     useEffect(() => {
         if (currentUser && currentUser.id) {
             const fetchChatRooms = async () => {
@@ -147,14 +198,14 @@ const Chat = () => {
                                 setCurrentChatRoom(roomsData[0].id);
                             }
                         } else {
-                            setCurrentChatRoom(null); // 채팅방이 없으면 현재 선택된 방을 null로 설정
+                            setCurrentChatRoom(null);
                         }
                     } else {
-                        console.error("Failed to fetch chat rooms:", response.status);
+                        console.error("채팅방 목록 가져오기 실패:", response.status);
                         setChatRoomsError(`채팅방 목록 로딩 실패 (${response.status})`);
                     }
                 } catch (error) {
-                    console.error("Error fetching chat rooms:", error);
+                    console.error("채팅방 목록 가져오는 중 오류 발생:", error);
                     setChatRoomsError('네트워크 오류로 채팅방 목록을 가져올 수 없습니다.');
                 } finally {
                     setChatRoomsLoading(false);
@@ -164,15 +215,13 @@ const Chat = () => {
         }
     }, [currentUser, currentChatRoom]);
 
-    // 전체 사용자 목록 조회
     useEffect(() => {
         if (currentUser && currentUser.id) {
             const fetchAllUsers = async () => {
                 setAllUsersLoading(true);
                 setAllUsersError('');
                 try {
-                    // 올바른 API 경로: /api/users
-                    const response = await fetch(`/api/users`); // <-- 이 부분 수정: /api/chat/ 경로 제거
+                    const response = await fetch(`/api/users`);
                     if (response.ok) {
                         const usersData = await response.json();
                         const formattedUsers = usersData.map(u => ({
@@ -180,14 +229,14 @@ const Chat = () => {
                             avatar: 'https://via.placeholder.com/32/CCCCCC/FFFFFF/?text=' + u.username.charAt(0).toUpperCase()
                         }));
                         setAllUsers(formattedUsers);
-                        console.log("Fetched all users:", formattedUsers);
+                        console.log("전체 사용자 목록 로드 성공:", formattedUsers);
                     } else {
                         const errorText = await response.text();
-                        console.error("Failed to fetch all users:", response.status, errorText);
+                        console.error("전체 사용자 목록 가져오기 실패:", response.status, errorText);
                         setAllUsersError(`전체 사용자 목록 로딩 실패 (${response.status}): ${errorText}`);
                     }
                 } catch (error) {
-                    console.error("Error fetching all users:", error);
+                    console.error("전체 사용자 목록 가져오는 중 오류 발생:", error);
                     setAllUsersError('네트워크 오류로 전체 사용자 목록을 가져올 수 없습니다.');
                 } finally {
                     setAllUsersLoading(false);
@@ -197,7 +246,27 @@ const Chat = () => {
         }
     }, [currentUser]);
 
-    // 특정 채팅방 참여자 목록 조회 (기존 로직 유지)
+    // === 추가 부분: 초기 접속자 목록 API 호출 ===
+    useEffect(() => {
+        if (currentUser && currentUser.id) {
+            const fetchInitialConnectedUsers = async () => {
+                try {
+                    const response = await fetch('/api/users/connected'); // WebSocketUserController의 API 호출
+                    if (response.ok) {
+                        const connectedUsersData = await response.json();
+                        setConnectedUsers(connectedUsersData);
+                        console.log("초기 접속자 목록 로드 성공 (API):", connectedUsersData);
+                    } else {
+                        console.error("초기 접속자 목록 API 호출 실패:", response.status, await response.text());
+                    }
+                } catch (error) {
+                    console.error("초기 접속자 목록 API 호출 중 오류 발생:", error);
+                }
+            };
+            fetchInitialConnectedUsers();
+        }
+    }, [currentUser]); // currentUser가 로드될 때 호출
+
     useEffect(() => {
         if (currentChatRoom && currentUser && currentUser.id) {
             const fetchRoomParticipants = async () => {
@@ -211,10 +280,10 @@ const Chat = () => {
                             [currentChatRoom]: participantsData || []
                         }));
                     } else {
-                        console.error(`Failed to fetch participants for room ${currentChatRoom}:`, response.status);
+                        console.error(`채팅방 ${currentChatRoom}의 참여자 목록 가져오기 실패:`, response.status);
                     }
                 } catch (error) {
-                    console.error(`Error fetching participants for room ${currentChatRoom}:`, error);
+                    console.error(`채팅방 ${currentChatRoom}의 참여자 목록 가져오는 중 오류 발생:`, error);
                 } finally {
                     setParticipantsLoading(false);
                 }
@@ -224,42 +293,45 @@ const Chat = () => {
     }, [currentChatRoom, currentUser]);
 
 
-    // [수정된 부분 1]: 웹소켓 기본 연결 및 connectedUsers 구독 (currentUser만 있으면 작동)
-    // 이 useEffect는 STOMP 클라이언트의 활성화와 /topic/connectedUsers 구독을 관리합니다.
+    // [수정 부분] SockJS 없이 순수 WebSocket 연결 시도
     useEffect(() => {
-        // currentUser 정보가 없으면 연결 시도 안 함
-        if (!currentUser || !currentUser.id) {
-            // 기존 연결이 있다면 비활성화
+        if (!currentUser || !currentUser.name) {
+            console.log("STOMP (Basic): currentUser 정보가 없어 연결 시도 안 함.");
             if (stompClientRef.current && stompClientRef.current.active) {
-                console.log("STOMP (Basic): Deactivating existing client due to missing user info.");
+                console.log("STOMP (Basic): 기존 클라이언트 비활성화.");
                 stompClientRef.current.deactivate();
-                stompClientRef.current = null; // 클라이언트 비활성화 시 참조 제거
+                stompClientRef.current = null;
             }
             setIsConnected(false);
+            // setConnectedUsers([]); // 이 부분은 초기 API 호출에서 처리하도록 유지
             return;
         }
 
-        // 이미 연결되어 있고, 사용자 변경이 없으면 재연결 불필요 (userIdBeforeDeactivation로 사용자 변경 감지)
-        // 이 useEffect는 기본 연결과 connectedUsers 구독을 위한 것이므로, 룸 변경에 따른 재연결은 여기서 관리하지 않음.
         if (stompClientRef.current && stompClientRef.current.active &&
-            stompClientRef.current.userIdBeforeDeactivation === currentUser.id) {
-            console.log("STOMP (Basic): Already connected for connectedUsers, user unchanged. Skipping re-activation.");
+            stompClientRef.current.userIdBeforeDeactivation === currentUser.name) {
+            console.log("STOMP (Basic): 이미 연결되어 있고 사용자 변경 없음. 재활성화 건너뛰기.");
             if (!isConnected) setIsConnected(true);
             return;
         }
 
-        console.log(`STOMP (Basic): Attempting to connect for connectedUsers as user: ${currentUser.id}`);
+        console.log(`STOMP (Basic): 웹소켓 연결 시도 중 (사용자: ${currentUser.name})`);
 
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const wsProtocol = 'ws';
         const wsHost = window.location.hostname;
-        const wsPort = process.env.REACT_APP_WS_PORT || '9443'; // .env 설정 또는 기본 9443
-        const wsEndpoint = process.env.REACT_APP_WS_ENDPOINT || '/ws';
+        const wsPort = '9000';
+        const wsEndpoint = '/ws';
         const brokerURL = `${wsProtocol}://${wsHost}:${wsPort}${wsEndpoint}`;
+
+        if (stompClientRef.current && stompClientRef.current.active) {
+            console.log("STOMP (Basic): 새 연결 전 기존 클라이언트 비활성화.");
+            stompClientRef.current.deactivate();
+            stompClientRef.current = null;
+        }
 
         const client = new Client({
             brokerURL,
             connectHeaders: {
-                username: currentUser.name, // 백엔드 WebSocketConfig와 일치하도록 username 사용
+                username: currentUser.name,
             },
             debug: (str) => {
                 console.log(new Date(), 'STOMP DEBUG (Basic): ', str);
@@ -269,60 +341,69 @@ const Chat = () => {
             heartbeatOutgoing: 4000,
             onConnect: (frame) => {
                 setIsConnected(true);
-                stompClientRef.current = client; // Ref 업데이트
-                stompClientRef.current.userIdBeforeDeactivation = currentUser.id; // 사용자 정보 저장
-                console.log(`STOMP (Basic) Connected as user: ${currentUser.id}`, frame);
+                stompClientRef.current = client;
+                stompClientRef.current.userIdBeforeDeactivation = currentUser.name;
+                console.log(`STOMP (Basic) 연결 성공 (사용자: ${currentUser.name})`, frame);
 
-                // connectedUsers 토픽 구독 (연결 시마다 구독)
                 client.subscribe('/topic/connectedUsers', (message) => {
                     try {
                         const updatedConnectedUsersArray = JSON.parse(message.body);
-                        setConnectedUsers(new Set(updatedConnectedUsersArray)); // Set으로 변환하여 상태 업데이트
-                        console.log("Updated connected users via WebSocket: ", updatedConnectedUsersArray);
+                        setConnectedUsers(updatedConnectedUsersArray);
+                        console.log("웹소켓을 통해 연결된 사용자 목록 업데이트됨: ", updatedConnectedUsersArray);
+
+                        const debugUsersAfterUpdate = getDisplayedUsersInRightSidebarWithProvidedArray(updatedConnectedUsersArray, allUsers, currentUser);
+                        console.log('*** 직후: 처리된 사이드바 사용자 (updatedConnectedUsersArray 사용):', debugUsersAfterUpdate);
+
                     } catch (error) {
-                        console.error("Failed to parse connected users update message: ", message.body, error);
+                        console.error("연결된 사용자 업데이트 메시지 파싱 실패: ", message.body, error);
                     }
                 });
-                console.log("Subscribed to /topic/connectedUsers for real-time updates.");
+                console.log("/topic/connectedUsers 토픽 구독됨.");
             },
             onStompError: (frame) => {
-                console.error('STOMP (Basic): Broker reported error: ' + frame.headers['message'], frame.body);
+                console.error('STOMP (Basic): 브로커 오류 발생: ' + frame.headers['message'], frame.body);
                 setIsConnected(false);
+                // setConnectedUsers([]); // 이 부분은 초기 API 호출에서 처리하도록 유지
             },
             onWebSocketClose: (event) => {
-                console.log('STOMP (Basic): WebSocket closed.', event);
+                console.log('STOMP (Basic): 웹소켓 닫힘.', event);
                 setIsConnected(false);
+                // setConnectedUsers([]); // 이 부분은 초기 API 호출에서 처리하도록 유지
             },
             onDisconnect: (frame) => {
-                console.log('STOMP (Basic): Client disconnected.', frame);
+                console.log('STOMP (Basic): 클라이언트 연결 해제됨.', frame);
                 setIsConnected(false);
+                // setConnectedUsers([]); // 이 부분은 초기 API 호출에서 처리하도록 유지
             }
         });
 
         client.activate();
 
-        // Cleanup 함수: 컴포넌트 언마운트 시 또는 currentUser가 변경되어 이 useEffect가 재실행될 때 기존 클라이언트 비활성화
         return () => {
             if (stompClientRef.current && stompClientRef.current.active) {
-                console.log(`Deactivating STOMP client (Basic) for user: ${currentUser.id} during cleanup.`);
+                console.log(`STOMP 클라이언트 (Basic) 정리 중 비활성화 (사용자: ${currentUser.name}).`);
                 stompClientRef.current.deactivate();
-                stompClientRef.current = null; // 참조 초기화
+                stompClientRef.current = null;
+                setIsConnected(false);
+                // setConnectedUsers([]); // 이 부분은 초기 API 호출에서 처리하도록 유지
             }
         };
-    }, [currentUser]); // currentUser가 변경될 때만 이 useEffect를 재실행
+    }, [currentUser, allUsers]); // allUsers도 dependency에 추가하여 connectedUsers 업데이트 시 올바른 정보가 반영되도록 함
 
-    // [수정된 부분 2]: 채팅방 메시지 구독 (currentChatRoom이 있을 때만)
-    // 이 useEffect는 특정 채팅방의 메시지 구독을 관리합니다.
+    // 채팅방 메시지 구독 (currentChatRoom이 있을 때만)
     useEffect(() => {
-        // currentChatRoom, currentUser, stompClient가 활성화되어 있지 않으면 구독하지 않음
         if (!currentUser || !currentUser.id || !currentChatRoom || !stompClientRef.current || !stompClientRef.current.active) {
-            // 이전 구독이 있다면 여기서 해제될 수 있도록 return
+            console.log("STOMP (Messages): 메시지 구독을 위한 필수 조건 미충족. 현재 상태:", {
+                currentUser: !!currentUser,
+                currentChatRoom: !!currentChatRoom,
+                stompClientActive: stompClientRef.current?.active
+            });
             return;
         }
 
         const selectedRoomObject = chatRooms.find(room => room.id === currentChatRoom);
         if (!selectedRoomObject) {
-            console.warn(`STOMP: Room data not found in local state for currentChatRoom: ${currentChatRoom}. Message subscription deferred.`);
+            console.warn(`STOMP (Messages): currentChatRoom (${currentChatRoom})에 대한 방 데이터가 로컬 상태에서 발견되지 않음. 메시지 구독 연기.`);
             return;
         }
 
@@ -331,14 +412,12 @@ const Chat = () => {
             ? `/topic/private/${intRoomIdForSubscription}`
             : `/topic/group/${intRoomIdForSubscription}`;
 
-        console.log(`STOMP: Subscribing to messages for room ${currentChatRoom} at ${subscriptionDestination}`);
+        console.log(`STOMP (Messages): 방 ${currentChatRoom}의 메시지 구독 시도 중 (${subscriptionDestination})`);
 
-        // [중요] 기존 구독 해제: 방이 바뀌거나 언마운트될 때 기존 구독을 해제해야 중복 메시지를 받지 않음
-        // stompClientRef.current는 이미 첫 번째 useEffect에서 활성화된 상태여야 함.
         const subscription = stompClientRef.current.subscribe(subscriptionDestination, (message) => {
             try {
                 const receivedMsg = JSON.parse(message.body);
-                console.log(`Message received for room ${currentChatRoom} (subscribed to ${subscriptionDestination}):`, receivedMsg);
+                console.log(`방 ${currentChatRoom} (${subscriptionDestination} 구독)에서 메시지 수신:`, receivedMsg);
                 const messageToStore = {
                     id: receivedMsg.messageId || receivedMsg.id || Date.now(),
                     sender: receivedMsg.username || 'Unknown',
@@ -368,25 +447,23 @@ const Chat = () => {
                     };
                 });
             } catch (error) {
-                console.error("Failed to parse STOMP message:", message.body, error);
+                console.error("STOMP 메시지 파싱 실패:", message.body, error);
             }
         });
 
-        // Cleanup 함수: 현재 채팅방이 변경되거나 컴포넌트 언마운트 시 기존 구독 해제
         return () => {
-            if (stompClientRef.current && stompClientRef.current.active) {
-                console.log(`Unsubscribing from ${subscriptionDestination}`);
-                subscription.unsubscribe(); // 특정 구독만 해제
+            if (stompClientRef.current && stompClientRef.current.active && subscription) {
+                console.log(`${subscriptionDestination} 구독 해제 중.`);
+                subscription.unsubscribe();
             }
         };
-    }, [currentChatRoom, currentUser, chatRooms, isConnected]); // isConnected도 의존성 추가
+    }, [currentChatRoom, currentUser, chatRooms, isConnected]);
 
 
     const handleSendMessage = () => {
         const selectedRoom = chatRooms.find(room => room.id === currentChatRoom);
         if (!selectedRoom) {
-            console.error("Cannot send message, selected room not found in local state:", currentChatRoom);
-            alert("선택된 채팅방 정보를 찾을 수 없습니다.");
+            console.error("메시지를 보낼 수 없습니다. 선택된 방 정보를 찾을 수 없습니다:", currentChatRoom);
             return;
         }
 
@@ -408,9 +485,11 @@ const Chat = () => {
             setNewMessage('');
         } else {
             if (!currentUser) {
-                alert('사용자 정보가 로드되지 않았습니다.');
+                console.warn('사용자 정보가 로드되지 않았습니다.');
             } else if (!stompClientRef.current || !stompClientRef.current.active) {
-                alert('채팅 서버에 연결되어 있지 않습니다.');
+                console.warn('채팅 서버에 연결되어 있지 않습니다.');
+            } else {
+                console.warn('빈 메시지는 보낼 수 없습니다.');
             }
         }
     };
@@ -433,7 +512,6 @@ const Chat = () => {
 
     const getCurrentMessages = () => messages[currentChatRoom] || [];
 
-    // 현재 채팅방 참여자 목록 (기존 로직 유지)
     const getCurrentParticipants = () => {
         const currentRoomKey = currentChatRoom;
         const participants = currentRoomKey ? (roomParticipants[currentRoomKey] || []) : [];
@@ -446,46 +524,12 @@ const Chat = () => {
         return participants;
     };
 
-    // 모든 사용자 목록 + 온라인 상태를 포함하여 사이드바에 표시할 함수
-    const getDisplayedUsersInRightSidebar = useCallback(() => {
-        if (!allUsers || allUsers.length === 0) {
-            return [];
-        }
 
-        const usersWithStatus = allUsers.map(u => ({
-            ...u,
-            // connectedUsers Set에는 username이 저장되어 있으므로 u.username으로 확인
-            status: connectedUsers.has(u.username) ? 'online' : 'offline',
-            avatar: u.avatar || 'https://via.placeholder.com/32/CCCCCC/FFFFFF/?text=' + u.username.charAt(0).toUpperCase()
-        }));
-
-        let sortedUsers = [];
-        if (currentUser) {
-            const otherUsers = usersWithStatus.filter(u => u.id !== currentUser.id.toString());
-            const me = usersWithStatus.find(u => u.id === currentUser.id.toString());
-
-            if (me) {
-                sortedUsers.push({
-                    ...me,
-                    avatar: currentUser.avatar,
-                    name: currentUser.name,
-                    status: connectedUsers.has(currentUser.name) ? 'online' : 'offline'
-                });
-            }
-            sortedUsers = sortedUsers.concat(otherUsers);
-        } else {
-            sortedUsers = usersWithStatus;
-        }
-
-        // 온라인 사용자를 먼저, 그 다음 이름순으로 정렬
-        sortedUsers.sort((a, b) => {
-            if (a.status === 'online' && b.status !== 'online') return -1;
-            if (a.status !== 'online' && b.status === 'online') return 1;
-            return a.name.localeCompare(b.name);
-        });
-
-        return sortedUsers;
-    }, [allUsers, connectedUsers, currentUser]);
+    // === 수정 부분: useCallback 없이 직접 함수 정의 ===
+    const getDisplayedUsersInRightSidebar = () => {
+        const currentConnectedUsersArray = Array.isArray(connectedUsers) ? connectedUsers : [];
+        return getDisplayedUsersInRightSidebarWithProvidedArray(currentConnectedUsersArray, allUsers, currentUser);
+    };
 
 
     return (
@@ -497,13 +541,28 @@ const Chat = () => {
                     <div className="connection-status">
                         <div className={`status-indicator ${isConnected ? 'connected' : 'disconnected'}`}></div>
                         <span className="status-text">
-                            {isConnected ? '연결됨' : '연결 중...'}
-                        </span>
+                                {isConnected ? '연결됨' : '연결 중...'}
+                            </span>
                     </div>
                 </div>
 
                 <div className="rooms-list">
-                    {chatRooms.map((room) => (
+                    {/* 로딩 중일 때 */}
+                    {chatRoomsLoading && <div className="loading-text">채팅방 로딩 중...</div>}
+
+                    {/* 에러 발생 시 */}
+                    {chatRoomsError && <div className="error-text">오류: {chatRoomsError}</div>}
+
+                    {/* 로딩 완료 후 채팅방이 없을 때 */}
+                    {!chatRoomsLoading && !chatRoomsError && chatRooms.length === 0 && (
+                        <div className="empty-rooms-message">
+                            <p>참여 중인 채팅방이 없습니다.</p>
+                            <p>새로운 채팅방을 생성하거나 프로젝트에 참여하여 채팅을 시작하세요.</p>
+                        </div>
+                    )}
+
+                    {/* 채팅방 목록이 있을 때만 맵핑하여 렌더링 */}
+                    {!chatRoomsLoading && !chatRoomsError && chatRooms.length > 0 && chatRooms.map((room) => (
                         <div
                             key={room.id}
                             onClick={() => handleRoomChange(room.id)}
@@ -518,40 +577,16 @@ const Chat = () => {
                                         <h3 className="room-name">{room.name}</h3>
                                         {room.unreadCount > 0 && (
                                             <span className="unread-badge">
-                                                {room.unreadCount}
-                                            </span>
+                                                    {room.unreadCount}
+                                                </span>
                                         )}
                                     </div>
-                                    <p style={{
-                                        fontSize: '12px',
-                                        color: '#6B7280',
-                                        margin: '4px 0',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap'
-                                    }}>{room.description}</p>
-                                    <p style={{
-                                        fontSize: '12px',
-                                        color: '#9CA3AF',
-                                        margin: '4px 0',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap'
-                                    }}>{room.lastMessage}</p>
-                                    <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        marginTop: '8px'
-                                    }}>
-                                        <span style={{fontSize: '11px', color: '#9CA3AF'}}>{room.lastMessageTime}</span>
-                                        <div style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            fontSize: '11px',
-                                            color: '#9CA3AF'
-                                        }}>
-                                            <Users style={{width: '12px', height: '12px', marginRight: '4px'}}/>
+                                    <p className="room-description">{room.description}</p>
+                                    <p className="room-last-message">{room.lastMessage}</p>
+                                    <div className="room-footer">
+                                        <span className="last-message-time">{room.lastMessageTime}</span>
+                                        <div className="participants-count">
+                                            <Users className="participants-icon"/>
                                             {room.participants}
                                         </div>
                                     </div>
@@ -598,12 +633,8 @@ const Chat = () => {
                             <div className="empty-chat-avatar" style={{backgroundColor: getCurrentRoom()?.color}}>
                                 <Hash className="empty-chat-icon"/>
                             </div>
-                            <h3 style={{
-                                fontSize: '16px',
-                                fontWeight: '600',
-                                margin: 0
-                            }}>{getCurrentRoom()?.name}</h3>
-                            <p style={{fontSize: '14px', textAlign: 'center', lineHeight: '1.5'}}>
+                            <h3 className="empty-chat-title">{getCurrentRoom()?.name}</h3>
+                            <p className="empty-chat-description">
                                 {getCurrentRoom()?.description}<br/>
                                 팀원들과 소통을 시작해보세요.
                             </p>
@@ -624,18 +655,9 @@ const Chat = () => {
                                                 <span className="message-sender">{message.sender}</span>
                                             )}
                                             <div className={`message-bubble ${message.isOwn ? 'own-bubble' : 'other-bubble'}`}>
-                                                <p style={{
-                                                    fontSize: '14px',
-                                                    lineHeight: '1.5',
-                                                    margin: 0
-                                                }}>{message.content}</p>
+                                                <p className="message-text">{message.content}</p>
                                             </div>
-                                            <span style={{
-                                                fontSize: '11px',
-                                                color: '#9CA3AF',
-                                                marginTop: '4px',
-                                                paddingLeft: '4px'
-                                            }}>{message.time}</span>
+                                            <span className="message-time">{message.time}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -648,23 +670,26 @@ const Chat = () => {
                 {/* 메시지 입력 영역 */}
                 <div className="message-input-container">
                     <div className="message-input-wrapper">
-                        <textarea
-                            value={newMessage}
-                            onChange={(e) => setNewMessage(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder={`${getCurrentRoom()?.name}에 메시지 보내기...`}
-                            className="message-input"
-                            rows="1"
-                        />
+                            <textarea
+                                value={newMessage}
+                                onChange={(e) => setNewMessage(e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                // currentChatRoom이 null이면 플레이스홀더 변경
+                                placeholder={currentChatRoom ? `${getCurrentRoom()?.name}에 메시지 보내기...` : "메시지를 보낼 채팅방을 선택하거나 생성하세요..."}
+                                className="message-input"
+                                rows="1"
+                                // currentChatRoom이 null이면 비활성화
+                                disabled={!currentChatRoom}
+                            />
 
-                        <button className="input-action-button">
+                        <button className="input-action-button" disabled={!currentChatRoom}>
                             <Smile className="input-action-icon"/>
                         </button>
 
                         <button
                             onClick={handleSendMessage}
-                            disabled={!newMessage.trim()}
-                            className={`send-button ${!newMessage.trim() ? 'disabled' : 'enabled'}`}
+                            disabled={!newMessage.trim() || !currentChatRoom}
+                            className={`send-button ${!newMessage.trim() || !currentChatRoom ? 'disabled' : 'enabled'}`}
                         >
                             <Send className="send-icon"/>
                         </button>
@@ -672,18 +697,20 @@ const Chat = () => {
                 </div>
             </div>
 
-            {/* 오른쪽 사이드바 - 현재 채팅방 참여자 */}
+            {/* 오른쪽 사이드 바 - 모든 사용자 목록 (온라인 상태 포함)*/}
             {isRightSidebarOpen && (
                 <div className="right-sidebar">
                     <div className="participants-header">
                         <div className="participants-info">
-                            <h3 className="participants-title">참여자</h3>
-                            <p className="participants-count">{getCurrentParticipants().length}명</p>
+                            {/* 텍스트 변경: "참여자" -> "모든 사용자" 또는 "사용자" */}
+                            <h3 className="participants-title">모든 사용자</h3>
+                            {/* 현재 사이드바에 표시되는 사용자 수를 getDisplayedUsersInRightSidebar().length로 표시 */}
+                            <p className="participants-count">{getDisplayedUsersInRightSidebar().length}명</p>
                         </div>
                         <button
                             onClick={() => setIsRightSidebarOpen(false)}
                             className="close-sidebar-button"
-                            title="참여자 목록 닫기"
+                            title="사용자 목록 닫기"
                         >
                             <ChevronRight className="close-sidebar-icon"/>
                         </button>
@@ -691,37 +718,37 @@ const Chat = () => {
 
                     <div className="participants-list">
                         <div className="participants-grid">
-                            {getCurrentParticipants().map((user) => (
+                            {getDisplayedUsersInRightSidebar().map((user) => (
                                 <div key={user.id} className="participant-item">
                                     <div className="participant-avatar-container">
-                                        <img src={user.avatar} alt={user.name} className="participant-avatar"/>
-                                        <div className={`participant-status ${user.status || 'offline'}`}></div>
+                                        <img src={user.avatar} alt={user.username} className="participant-avatar"/>
+                                        <div className={`participant-status ${user.status === 'online' ? 'online' : 'offline'}`}></div>
                                     </div>
                                     <div className="participant-info">
-                                        <p className="participant-name">{user.name}</p>
-                                        <p style={{fontSize: '12px', color: '#6B7280', margin: 0}}>
-                                            {user.status === 'online' ? '온라인' :
-                                                user.status === 'away' ? '자리비움' : '오프라인'}
+                                        <p className="participant-name">{user.username}</p>
+                                        <p className="participant-status-text">
+                                            {user.status === 'online' ? '온라인' : '오프라인'}
                                         </p>
                                     </div>
                                 </div>
                             ))}
+                            {allUsersLoading && <div className="loading-text">사용자 목록 로딩 중...</div>}
+                            {allUsersError && <div className="error-text">오류: {allUsersError}</div>}
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* 사이드바가 닫혔을 때 토글 버튼 */}
             {!isRightSidebarOpen && (
                 <div className="sidebar-toggle">
                     <button
                         onClick={() => setIsRightSidebarOpen(true)}
                         className="toggle-button"
-                        title="참여자 목록 열기"
+                        title="사용자 목록 열기"
                     >
                         <ChevronLeft className="toggle-icon"/>
                     </button>
-                    <div className="toggle-text">참여자</div>
+                    <div className="toggle-text">사용자</div>
                 </div>
             )}
         </div>
@@ -729,3 +756,4 @@ const Chat = () => {
 };
 
 export default Chat;
+

@@ -9,7 +9,7 @@ import org.springframework.boot.web.servlet.server.ServletWebServerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-@Configuration
+//@Configuration
 public class HttpsRedirectConfig {
 
     @Bean
@@ -21,7 +21,7 @@ public class HttpsRedirectConfig {
                         SecurityConstraint constraint = new SecurityConstraint();
                         constraint.setUserConstraint("CONFIDENTIAL");
                         SecurityCollection collection = new SecurityCollection();
-                        collection.addPattern("/*");
+                        collection.addPattern("/*"); // 모든 HTTP 요청을 HTTPS로 리디렉션
                         constraint.addCollection(collection);
                         context.addConstraint(constraint);
                     }

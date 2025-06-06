@@ -1,6 +1,5 @@
 package ac.kr.changwon.se_proj.service.impl;
 
-
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,14 +10,16 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
-@Component
+//@Component
 @RequiredArgsConstructor
 public class WebSocketEventListener {
 
-
     private static final Logger logger = LoggerFactory.getLogger(WebSocketEventListener.class);
 
+    // SimpMessageSendingOperations는 이 리스너에서 직접 메시지를 보내지 않으므로 필요 없을 수 있습니다.
     private final SimpMessageSendingOperations messagingTemplate;
+    // WebSocketSessionTracker는 더 이상 add/remove 메서드를 제공하지 않습니다.
+    // 만약 이 리스너에서 sessionTracker의 getConnectedUsers() 같은 메서드를 호출해야 한다면 유지합니다.
     private final WebSocketSessionTracker sessionTracker;
 
     @EventListener
@@ -26,24 +27,19 @@ public class WebSocketEventListener {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
         String connectedUsername = null;
 
-        //널포인트익셉션 방지 및 사용자 이름 추출
-        if(headerAccessor.getUser() != null){
+        if (headerAccessor.getUser() != null) {
             connectedUsername = headerAccessor.getUser().getName();
         }
 
-        if(connectedUsername == null){
-            logger.warn("WebSocket connected, but username not found in Principal for session {}. This user will not be traker", headerAccessor.getSessionId());
+        if (connectedUsername == null) {
+            logger.warn("WebSocket connected, but username not found in Principal for session {}. This user will not be tracked.", headerAccessor.getSessionId());
             return;
         }
 
-        //세션 트래커에 사용자 추가
-        sessionTracker.addConnectedUser(connectedUsername);
-
+        // --- WebSocketSessionTracker가 이 이벤트를 직접 처리하므로 다음 줄은 제거됩니다. ---
+        // sessionTracker.addConnectedUser(connectedUsername);
         logger.info("WebSocket connected, username={}", connectedUsername);
 
-        //연결된 사용자 목록 업데이트를 모든 클라이언트에게 브로드캐스팅
-        //사용자가 추가된 후 최신 목록 발행
-        messagingTemplate.convertAndSend("/topic/connectedUsers", sessionTracker.getConnectedUsers());
     }
 
 
@@ -52,18 +48,18 @@ public class WebSocketEventListener {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
         String disconnectedUsername = null;
 
-        //널포인트익셉션 방지 및 사용자 이름 추출
-        if(headerAccessor.getUser() != null){
+        if (headerAccessor.getUser() != null) {
             disconnectedUsername = headerAccessor.getUser().getName();
         }
 
-        if( disconnectedUsername == null){
-            logger.warn(" WebSocket disconnected, but username not found in Principal for session {}", headerAccessor.getSessionId());
+        if (disconnectedUsername == null) {
+            logger.warn("WebSocket disconnected, but username not found in Principal for session {}", headerAccessor.getSessionId());
             return;
         }
 
-        sessionTracker.removeConnectedUser(disconnectedUsername);
-        logger.info("WebSocket disconnected, username={} Total connected: {}", disconnectedUsername, sessionTracker.getConnectedUsers().size() );
-        messagingTemplate.convertAndSend("/topic/connectedUsers", sessionTracker.getConnectedUsers());
+        // --- WebSocketSessionTracker가 이 이벤트를 직접 처리하므로 다음 줄은 제거됩니다. ---
+        // sessionTracker.removeConnectedUser(disconnectedUsername);
+        logger.info("WebSocket disconnected, username={} Total connected: {}", disconnectedUsername, sessionTracker.getConnectedUsers().size());
+
     }
 }

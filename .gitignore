@@ -48,7 +48,7 @@ out/
 ### VS Code ###
 .vscode/
 
-/src/main/resources/application.properties
+/src/main/resources/new_localhost.cer
 /src/main/resources/keystore.jks
 /frontEnd/package-lock.json
 /frontEnd/package.json
