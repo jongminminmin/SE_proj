@@ -1,29 +1,34 @@
 package ac.kr.changwon.se_proj.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import org.springframework.data.domain.Persistable;
+import lombok.*;
 
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
-@Table(name = "\"user\"")
+@Table(name = "users")
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@EqualsAndHashCode(of = "id")
 /* indicate for user.
 * username : nickname
 * id : user id for login
 * password : for login Authenticate
 * email : just e-mail*/
-public class User implements Persistable<String>, Serializable {
+public class User implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
 
     @Id
-    @Column(length = 25
+    @Column(length = 255
     , updatable = false,
     nullable = false)
     private String id;
@@ -41,7 +46,7 @@ public class User implements Persistable<String>, Serializable {
     @Transient
     private boolean isNew = false;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name ="project_id")
     private Project project;
 
@@ -54,36 +59,6 @@ public class User implements Persistable<String>, Serializable {
     @Column(name = "password_reset_token_expiry")
     private LocalDateTime passwordResetTokenExpiry;
 
-    public User(String id, String username, String password, String email) {
-        this.id = id;
-        this.username = username;
-        this.password = password;
-        this.email = email;
-        this.isNew = true;
-    }
-
-    public User() {}
-
-    public User(String userId, String username, String pw, String email, String role) {
-        this.id = userId;
-        this.username = username;
-        this.password = pw;
-        this.email = email;
-        this.role = role;
-        this.isNew = true;
-    }
-
-
-    @Override
-    @Transient
-    public boolean isNew() {
-        return this.isNew;
-    }
-
-    @Override
-    public String getId() {
-        return this.id;
-    }
 
 
     /** DB에서 로딩할 땐 new 플래그를 꺼줘야 함 */
@@ -93,4 +68,8 @@ public class User implements Persistable<String>, Serializable {
     }
 
     //public Object getUserId() {}
+
+    // User와 UserChatRoom 간의 One-to-Many 관계 설정
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<UserChatRoom> userChatRooms = new HashSet<>();
 }

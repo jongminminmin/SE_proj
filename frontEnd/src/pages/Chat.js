@@ -19,7 +19,7 @@ const Smile = ({ className }) => (
 );
 
 const MoreVertical = ({ className }) => (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="1"/>
         <circle cx="12" cy="5" r="1"/>
         <circle cx="12" cy="19" r="1"/>
@@ -59,8 +59,6 @@ const ChevronRight = ({ className }) => (
 const PRIVATE_ROOM_MAX_ID_FROM_SERVER = 10;
 
 
-// getDisplayedUsersInRightSidebarWithProvidedArray 함수는 컴포넌트 밖으로 분리되어야 합니다.
-// Chat 컴포넌트 외부에 정의되어 있어야 합니다.
 const getDisplayedUsersInRightSidebarWithProvidedArray = (providedConnectedUsersArray, allUsers, currentUser) => {
     if (!allUsers || allUsers.length === 0) {
         return [];
@@ -182,6 +180,7 @@ const Chat = () => {
         fetchCurrentUser();
     }, [navigate]);
 
+    // --- 채팅방 목록 불러오기 (unreadCount 반영) ---
     useEffect(() => {
         if (currentUser && currentUser.id) {
             const fetchChatRooms = async () => {
@@ -246,12 +245,11 @@ const Chat = () => {
         }
     }, [currentUser]);
 
-    // === 추가 부분: 초기 접속자 목록 API 호출 ===
     useEffect(() => {
         if (currentUser && currentUser.id) {
             const fetchInitialConnectedUsers = async () => {
                 try {
-                    const response = await fetch('/api/users/connected'); // WebSocketUserController의 API 호출
+                    const response = await fetch('/api/users/connected');
                     if (response.ok) {
                         const connectedUsersData = await response.json();
                         setConnectedUsers(connectedUsersData);
@@ -265,7 +263,7 @@ const Chat = () => {
             };
             fetchInitialConnectedUsers();
         }
-    }, [currentUser]); // currentUser가 로드될 때 호출
+    }, [currentUser]);
 
     useEffect(() => {
         if (currentChatRoom && currentUser && currentUser.id) {
@@ -293,7 +291,7 @@ const Chat = () => {
     }, [currentChatRoom, currentUser]);
 
 
-    // [수정 부분] SockJS 없이 순수 WebSocket 연결 시도
+    // --- STOMP 클라이언트 연결 로직 ---
     useEffect(() => {
         if (!currentUser || !currentUser.name) {
             console.log("STOMP (Basic): currentUser 정보가 없어 연결 시도 안 함.");
@@ -303,7 +301,6 @@ const Chat = () => {
                 stompClientRef.current = null;
             }
             setIsConnected(false);
-            // setConnectedUsers([]); // 이 부분은 초기 API 호출에서 처리하도록 유지
             return;
         }
 
@@ -363,17 +360,14 @@ const Chat = () => {
             onStompError: (frame) => {
                 console.error('STOMP (Basic): 브로커 오류 발생: ' + frame.headers['message'], frame.body);
                 setIsConnected(false);
-                // setConnectedUsers([]); // 이 부분은 초기 API 호출에서 처리하도록 유지
             },
             onWebSocketClose: (event) => {
                 console.log('STOMP (Basic): 웹소켓 닫힘.', event);
                 setIsConnected(false);
-                // setConnectedUsers([]); // 이 부분은 초기 API 호출에서 처리하도록 유지
             },
             onDisconnect: (frame) => {
                 console.log('STOMP (Basic): 클라이언트 연결 해제됨.', frame);
                 setIsConnected(false);
-                // setConnectedUsers([]); // 이 부분은 초기 API 호출에서 처리하도록 유지
             }
         });
 
@@ -385,12 +379,12 @@ const Chat = () => {
                 stompClientRef.current.deactivate();
                 stompClientRef.current = null;
                 setIsConnected(false);
-                // setConnectedUsers([]); // 이 부분은 초기 API 호출에서 처리하도록 유지
             }
         };
-    }, [currentUser, allUsers]); // allUsers도 dependency에 추가하여 connectedUsers 업데이트 시 올바른 정보가 반영되도록 함
+    }, [currentUser]);
 
-    // 채팅방 메시지 구독 (currentChatRoom이 있을 때만)
+
+    // --- 채팅방 메시지 구독 및 메시지 기록 불러오기 ---
     useEffect(() => {
         if (!currentUser || !currentUser.id || !currentChatRoom || !stompClientRef.current || !stompClientRef.current.active) {
             console.log("STOMP (Messages): 메시지 구독을 위한 필수 조건 미충족. 현재 상태:", {
@@ -414,32 +408,92 @@ const Chat = () => {
 
         console.log(`STOMP (Messages): 방 ${currentChatRoom}의 메시지 구독 시도 중 (${subscriptionDestination})`);
 
+        // --- 1. 기존 구독 해제 ---
+        if (stompClientRef.current.subscriptions && stompClientRef.current.subscriptions[subscriptionDestination]) {
+            console.log(`기존 구독 ${subscriptionDestination} 해제 중.`);
+            stompClientRef.current.unsubscribe(subscriptionDestination);
+        }
+
+        // --- 2. 메시지 기록 불러오기 ---
+        const fetchChatHistory = async () => {
+            try {
+                const response = await fetch(`/api/chats/rooms/${currentChatRoom}/messages`);
+                if (response.ok) {
+                    const historyData = await response.json();
+                    // 메시지 시간 포맷팅 및 isOwn 계산
+                    const formattedHistory = historyData.map(msg => ({
+                        id: msg.messageId, // messageId 사용
+                        sender: msg.username,
+                        senderId: msg.senderId,
+                        content: msg.content,
+                        time: new Date(msg.timestamp).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit', hour12: true }),
+                        isOwn: msg.senderId === currentUser.id, // DTO의 senderId는 String, currentUser.id도 String
+                        avatar: 'https://via.placeholder.com/40', // 기본 아바타
+                    }));
+                    setMessages(prevMessages => ({
+                        ...prevMessages,
+                        [currentChatRoom]: formattedHistory
+                    }));
+                    console.log(`채팅방 ${currentChatRoom}의 메시지 기록 ${formattedHistory.length}개 로드 완료.`);
+                    scrollToBottom(); // 메시지 로드 후 스크롤
+                } else {
+                    console.error(`채팅방 ${currentChatRoom} 메시지 기록 로드 실패:`, response.status, await response.text());
+                }
+            } catch (error) {
+                console.error(`채팅방 ${currentChatRoom} 메시지 기록 로드 중 네트워크 오류:`, error);
+            }
+        };
+
+        // --- 3. 읽음 처리 API 호출 ---
+        const markRoomAsRead = async () => {
+            try {
+                const response = await fetch(`/api/chats/rooms/${currentChatRoom}/mark-as-read`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (response.ok) {
+                    console.log(`채팅방 ${currentChatRoom} 읽음 처리 완료.`);
+                    // 읽음 처리 후 왼쪽 사이드바의 unreadCount도 업데이트 (fetchChatRooms 재호출)
+                    // 이펙트 종속성에 currentUser, currentChatRoom이 있으므로 fetchChatRooms를 바로 호출
+                    // setChatRooms를 직접 업데이트하여 unreadCount를 0으로 설정하는 것도 가능
+                    const currentRoom = chatRooms.find(r => r.id === currentChatRoom);
+                    if (currentRoom) {
+                        setChatRooms(prevRooms => prevRooms.map(room =>
+                            room.id === currentChatRoom ? { ...room, unreadCount: 0 } : room
+                        ));
+                    }
+                } else {
+                    console.error(`채팅방 ${currentChatRoom} 읽음 처리 실패:`, response.status, await response.text());
+                }
+            } catch (error) {
+                console.error(`채팅방 ${currentChatRoom} 읽음 처리 중 네트워크 오류:`, error);
+            }
+        };
+
+
+        // --- 4. 새 구독 설정 ---
         const subscription = stompClientRef.current.subscribe(subscriptionDestination, (message) => {
             try {
                 const receivedMsg = JSON.parse(message.body);
                 console.log(`방 ${currentChatRoom} (${subscriptionDestination} 구독)에서 메시지 수신:`, receivedMsg);
                 const messageToStore = {
-                    id: receivedMsg.messageId || receivedMsg.id || Date.now(),
+                    id: receivedMsg.messageId || Date.now(), // messageId 사용
                     sender: receivedMsg.username || 'Unknown',
                     senderId: receivedMsg.senderId,
                     content: receivedMsg.content,
-                    time: receivedMsg.timestamp ? new Date(receivedMsg.timestamp).toLocaleTimeString('ko-KR', {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                    }) : new Date().toLocaleTimeString('ko-KR', {
+                    time: new Date(receivedMsg.timestamp).toLocaleTimeString('ko-KR', {
                         hour: 'numeric',
                         minute: '2-digit',
                         hour12: true
                     }),
-                    isOwn: receivedMsg.senderId === currentUser.id.toString(),
-                    avatar: receivedMsg.avatar || (receivedMsg.senderId === currentUser.id.toString() ? currentUser.avatar : 'https://via.placeholder.com/40'),
+                    isOwn: receivedMsg.senderId === currentUser.id, // currentUser.id는 String
+                    avatar: receivedMsg.avatar || (receivedMsg.senderId === currentUser.id ? currentUser.avatar : 'https://via.placeholder.com/40'),
                 };
 
                 setMessages(prevMessages => {
                     const currentRoomMessages = prevMessages[currentChatRoom] || [];
                     if (currentRoomMessages.find(msg => msg.id === messageToStore.id)) {
-                        return prevMessages;
+                        return prevMessages; // 중복 메시지 방지
                     }
                     return {
                         ...prevMessages,
@@ -451,15 +505,16 @@ const Chat = () => {
             }
         });
 
+        // Effect 클린업 함수
         return () => {
             if (stompClientRef.current && stompClientRef.current.active && subscription) {
                 console.log(`${subscriptionDestination} 구독 해제 중.`);
                 subscription.unsubscribe();
             }
         };
-    }, [currentChatRoom, currentUser, chatRooms, isConnected]);
+    }, [currentChatRoom, currentUser, chatRooms, isConnected, scrollToBottom]); // chatRooms를 종속성에 추가하여 unreadCount 변경 감지 및 새로고침
 
-
+    // 메시지 입력 및 전송 로직은 변경 없음
     const handleSendMessage = () => {
         const selectedRoom = chatRooms.find(room => room.id === currentChatRoom);
         if (!selectedRoom) {
@@ -470,15 +525,15 @@ const Chat = () => {
         const integerRoomId = selectedRoom.intId;
         if (newMessage.trim() && currentUser && stompClientRef.current && stompClientRef.current.active) {
             const messagePayload = {
-                senderId: currentUser.id.toString(),
-                roomId: integerRoomId,
+                senderId: currentUser.id, // currentUser.id는 String
+                chatRoomId: selectedRoom.id, // DTO의 chatRoomId는 String
                 username: currentUser.name,
                 content: newMessage.trim(),
-                timestamp: new Date().toISOString(),
+                timestamp: new Date().toISOString(), // ISO String으로 보냄
             };
 
             stompClientRef.current.publish({
-                destination: `/app/chat.sendMessage/${currentChatRoom}`,
+                destination: `/app/chat.sendMessage/${currentChatRoom}`, // PathVariable은 String ID 사용
                 body: JSON.stringify(messagePayload)
             });
 
@@ -503,7 +558,8 @@ const Chat = () => {
 
     const handleRoomChange = (roomId) => {
         if (roomId !== currentChatRoom) {
-            setMessages(prev => ({...prev, [roomId]: prev[roomId] || []}));
+            // 방 변경 시 이전 메시지 상태를 초기화할 필요 없음 (history API가 채울 것임)
+            // setMessages(prev => ({...prev, [roomId]: prev[roomId] || []}));
             setCurrentChatRoom(roomId);
         }
     };
@@ -514,21 +570,69 @@ const Chat = () => {
 
     const getCurrentParticipants = () => {
         const currentRoomKey = currentChatRoom;
-        const participants = currentRoomKey ? (roomParticipants[currentRoomKey] || []) : [];
-
-        if (currentUser) {
-            return participants.map(p =>
-                p.id === currentUser.id.toString() ? {...p, avatar: currentUser.avatar, name: currentUser.name} : p
-            );
-        }
-        return participants;
+        const roomData = chatRooms.find(room => room.id === currentRoomKey);
+        return roomData ? roomData.participants : 0; // ChatRoomDTO의 participants는 Long
     };
 
-
-    // === 수정 부분: useCallback 없이 직접 함수 정의 ===
     const getDisplayedUsersInRightSidebar = () => {
         const currentConnectedUsersArray = Array.isArray(connectedUsers) ? connectedUsers : [];
         return getDisplayedUsersInRightSidebarWithProvidedArray(currentConnectedUsersArray, allUsers, currentUser);
+    };
+
+    // --- 사이드바 사용자 클릭 핸들러 ---
+    const handleUserClickForChat = async (targetUser) => {
+        if (!currentUser || !currentUser.id) {
+            console.warn("현재 사용자 정보가 없습니다. 1:1 채팅을 시작할 수 없습니다.");
+            return;
+        }
+        if (targetUser.id === currentUser.id.toString()) {
+            console.log("자기 자신과의 채팅은 불가능합니다.");
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/chats/create-private-room', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user1Id: currentUser.id,
+                    user2Id: targetUser.id,
+                }),
+            });
+
+            if (response.ok) {
+                const roomData = await response.json();
+                console.log("1:1 채팅방 생성/입장 성공:", roomData);
+                // 새로운 방을 chatRooms 목록에 추가 (혹시 기존에 없던 방일 경우)
+                setChatRooms(prevRooms => {
+                    const roomExists = prevRooms.some(r => r.id === roomData.id);
+                    if (!roomExists) {
+                        return [...prevRooms, {
+                            id: roomData.id,
+                            intId: roomData.intId,
+                            name: roomData.name, // 서버에서 설정된 방 이름 사용
+                            description: roomData.description,
+                            lastMessage: roomData.lastMessage,
+                            lastMessageTime: roomData.lastMessageTime,
+                            participants: roomData.participants,
+                            unreadCount: roomData.unreadCount, // 초기 0 (서버에서 설정)
+                            color: roomData.color
+                        }];
+                    }
+                    return prevRooms;
+                });
+                // 현재 채팅방을 새로 생성/입장한 방으로 설정
+                setCurrentChatRoom(roomData.id);
+            } else {
+                console.error("1:1 채팅방 생성/입장 실패:", response.status, await response.text());
+                alert("1:1 채팅방 생성/입장 실패!");
+            }
+        } catch (error) {
+            console.error("네트워크 오류로 1:1 채팅방을 시작할 수 없습니다:", error);
+            alert("네트워크 오류로 1:1 채팅방을 시작할 수 없습니다.");
+        }
     };
 
 
@@ -575,6 +679,7 @@ const Chat = () => {
                                 <div className="room-info">
                                     <div className="room-header">
                                         <h3 className="room-name">{room.name}</h3>
+                                        {/* unreadCount 배지 표시 */}
                                         {room.unreadCount > 0 && (
                                             <span className="unread-badge">
                                                     {room.unreadCount}
@@ -587,7 +692,7 @@ const Chat = () => {
                                         <span className="last-message-time">{room.lastMessageTime}</span>
                                         <div className="participants-count">
                                             <Users className="participants-icon"/>
-                                            {room.participants}
+                                            {room.participants}명
                                         </div>
                                     </div>
                                 </div>
@@ -607,7 +712,7 @@ const Chat = () => {
                         </div>
                         <div className="current-room-info">
                             <h3 className="current-room-name">{getCurrentRoom()?.name}</h3>
-                            <p className="current-room-participants">{getCurrentParticipants().length}명 참여 중</p>
+                            <p className="current-room-participants">{getCurrentParticipants()}명 참여 중</p>
                         </div>
                     </div>
 
@@ -702,9 +807,7 @@ const Chat = () => {
                 <div className="right-sidebar">
                     <div className="participants-header">
                         <div className="participants-info">
-                            {/* 텍스트 변경: "참여자" -> "모든 사용자" 또는 "사용자" */}
                             <h3 className="participants-title">모든 사용자</h3>
-                            {/* 현재 사이드바에 표시되는 사용자 수를 getDisplayedUsersInRightSidebar().length로 표시 */}
                             <p className="participants-count">{getDisplayedUsersInRightSidebar().length}명</p>
                         </div>
                         <button
@@ -719,7 +822,11 @@ const Chat = () => {
                     <div className="participants-list">
                         <div className="participants-grid">
                             {getDisplayedUsersInRightSidebar().map((user) => (
-                                <div key={user.id} className="participant-item">
+                                <div
+                                    key={user.id}
+                                    className="participant-item"
+                                    onClick={() => handleUserClickForChat(user)}
+                                >
                                     <div className="participant-avatar-container">
                                         <img src={user.avatar} alt={user.username} className="participant-avatar"/>
                                         <div className={`participant-status ${user.status === 'online' ? 'online' : 'offline'}`}></div>

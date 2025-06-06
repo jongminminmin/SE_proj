@@ -2,10 +2,13 @@ package ac.kr.changwon.se_proj.controller.webSocket;
 
 import ac.kr.changwon.se_proj.dto.ChatMessageDTO;
 import ac.kr.changwon.se_proj.model.ChatMessage;
+import ac.kr.changwon.se_proj.model.ChatRoom;
 import ac.kr.changwon.se_proj.model.User;
 import ac.kr.changwon.se_proj.properties.ChatProperties;
-import ac.kr.changwon.se_proj.repository.ChatMessageRepository;
+import ac.kr.changwon.se_proj.repository.ChatRoomRepository; // ChatRoomRepository 임포트 추가
 import ac.kr.changwon.se_proj.repository.UserRepository;
+import ac.kr.changwon.se_proj.service.impl.ChatMessageServiceImpl; // NEW
+import ac.kr.changwon.se_proj.service.impl.ChatRoomServiceImpl; // 추가
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +20,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
+import java.time.LocalDateTime; // LocalDateTime 임포트 추가
 import java.util.Objects;
 
 @Controller
@@ -26,10 +30,10 @@ public class WebSocketController {
     private static final Logger log = LoggerFactory.getLogger(WebSocketController.class);
 
     private final SimpMessageSendingOperations messagingTemplate;
-    private final ChatMessageRepository chatMessageRepository;
     private final UserRepository userRepository;
     private final ChatProperties chatProps;
-
+    private final ChatRoomRepository chatRoomRepository; // NEW
+    private final ChatMessageServiceImpl chatMessageService; // NEW
 
     /**
      * WebSocket 메시지 수신 처리
@@ -38,56 +42,56 @@ public class WebSocketController {
     public void sendMessage(@Payload ChatMessageDTO message, @DestinationVariable String roomIdString, Principal principal) {
         log.info("Received message in sendMessage for room PathVariable: {}, DTO_RoomID: {}, Principal: {}",
                 roomIdString, // 경로에서 추출한 방 ID (예: "project_001")
-                (message != null ? message.getRoomId() : "null_DTO_roomId"), // DTO에 포함된 방 ID (int 타입이어야 함)
+                (message != null ? message.getChatRoomId() : "null_DTO_roomId"), // DTO에 포함된 방 ID (String 타입이어야 함)
                 (principal != null ? principal.getName() : "null_principal"));
-
-        int privateRoomMaxId = chatProps.getPrivateMaxRoomId();
-        log.debug("privateRoomMaxId from chatProps: {}", privateRoomMaxId);
 
         String usernameFromClient = (principal != null) ? principal.getName() : message.getUsername();
         log.info("Username to find in repository: {}", usernameFromClient);
 
-        // try-catch 블록 제거하고 orElseThrow가 직접 예외를 던지도록 함
         User sender = userRepository.findByUsername(usernameFromClient)
                 .orElseThrow(() -> {
-                    // 이 로그는 UsernameNotFoundException이 발생하기 직전에 찍힘
                     log.error("User not found for username: {}. Throwing UsernameNotFoundException.", usernameFromClient);
                     return new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + usernameFromClient);
                 });
-        log.info("Sender found: {}", sender.getUsername()); // 예외 발생 시 이 라인은 실행
+        log.info("Sender found: {}", sender.getUsername());
 
-        //DB 저장
+        ChatRoom chatRoom = chatRoomRepository.findById(message.getChatRoomId()) // DTO의 chatRoomId 사용
+                .orElseThrow(() -> new RuntimeException("ChatRoom not found with ID: " + message.getChatRoomId()));
+
+        // DB 저장 (ChatMessageServiceImpl로 위임)
         ChatMessage chat = ChatMessage.builder()
                 .sender(sender)
+                .chatRoom(chatRoom) // ChatRoom 객체 연결
                 .content(Objects.requireNonNull(message).getContent())
-                .username(sender.getUsername())
-                .timestamp(message.getTimestamp())
-                .roomId(message.getRoomId())
-                .receiverId(message.getReceiverId())
+                .username(sender.getUsername()) // 실제 발신자 username으로 설정
+                .timestamp(LocalDateTime.now()) // 현재 서버 시간으로 설정
                 .build();
-        try {
-            chatMessageRepository.save(chat);
-            log.info("Chat message saved to DB: RoomId={}, Sender={}", chat.getRoomId(), chat.getSender().getUsername());
-        }
-        catch (Exception e) {
-            log.error("Error saving chat message to DB, but will attempt to send. Error: {}", e.getMessage(), e);
-            // DB 저장 실패 시에도 메시지는 전송 시도할지, 아니면 여기서 중단할지 정책 필요
-        }
+
+        // 메시지 저장 및 다른 참여자의 unreadCount 증가
+        chat = chatMessageService.saveChatMessage(chat);
+        log.info("Chat message saved to DB and unread counts updated: RoomId={}, Sender={}", chat.getChatRoom().getId(), chat.getSender().getUsername());
+
+        // ChatRoom의 lastMessage와 lastMessageTime 업데이트
+        chatRoom.setLastMessage(chat.getContent());
+        chatRoom.setLastMessageTime(chat.getTimestamp());
+        chatRoomRepository.save(chatRoom); // ChatRoom 업데이트 저장
+
+        // 클라이언트로 보낼 DTO 업데이트 (저장된 메시지의 ID와 타임스탬프 사용)
+        message.setMessageId(chat.getMessageId()); // 저장된 메시지의 ID 설정
+        message.setSenderId(sender.getId()); // 발신자 ID 설정
+        message.setUsername(sender.getUsername());
+        message.setTimestamp(chat.getTimestamp()); // DB에 저장된 시간으로 통일
+        message.setChatRoomId(chatRoom.getId()); // ChatRoom ID 설정
 
         //분기 설정. roomId필드 기준으로 Private, Group 구분
         String destination;
-        if(message.getRoomId() <= privateRoomMaxId){
-            destination = "/topic/private/" + message.getRoomId();
+        if(chatRoom.getIntId() <= chatProps.getPrivateMaxRoomId()){ // ChatRoom 객체에서 intId 사용
+            destination = "/topic/private/" + chatRoom.getIntId();
         }
         else{
-            destination = "/topic/group/" + message.getRoomId();
+            destination = "/topic/group/" + chatRoom.getIntId();
         }
         log.info("Calculated destination: {}", destination);
-
-        // 클라이언트로 보낼 DTO 업데이트
-        message.setSenderId(sender.getId().toString()); // User ID가 Long이라면 String으로 변환, String이면 그대로
-        message.setUsername(sender.getUsername()); // 실제 발신자 username으로 설정 (일관성)
-        message.setTimestamp(chat.getTimestamp()); // DB에 저장된 시간 (또는 DTO의 시간)으로 통일
 
         try {
             messagingTemplate.convertAndSend(destination, message);
@@ -95,9 +99,5 @@ public class WebSocketController {
         } catch (Exception e) {
             log.error("Error sending message via messagingTemplate to {}. Error: {}", destination, e.getMessage(), e);
         }
-
     }
-
-
-
 }

@@ -81,44 +81,84 @@ Intelij IDE 사용시 어플리케이션 프로퍼티에 작성해놓은 드라�
 
 --- 
 ***데이터베이스 쿼리문***
+CREATE TABLE users (
+id VARCHAR(255) PRIMARY KEY NOT NULL UNIQUE,
+password VARCHAR(50) NOT NULL,
+username VARCHAR(36) NOT NULL UNIQUE,
+email VARCHAR(50)
+);
+ALTER TABLE users ADD COLUMN role VARCHAR(20);
+ALTER TABLE users ADD COLUMN password_reset_token VARCHAR(255);
+ALTER TABLE users ADD COLUMN password_reset_token_expiry DATETIME;
+ALTER TABLE users ADD COLUMN project_id INT;
 
-CREATE TABLE user(
-id varchar(25) NOT NULL UNIQUE PRIMARY KEY ,
-password varchar(50) NOT NULL,
-username varchar(36) NOT NULL UNIQUE ,
-email varchar(50)
+CREATE TABLE projects (
+project_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+project_title VARCHAR(100),
+description VARCHAR(1000),
+owner_id VARCHAR(255) NOT NULL,
+date DATE DEFAULT (CURRENT_DATE),
+project_member_tier VARCHAR(5) NOT NULL,
+CONSTRAINT FK_project_owner FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE TABLE project(
-project_id int PRIMARY KEY NOT NULL ,
-project_title varchar(100),
-description varchar(1000),
-owner_id varchar(25) NOT NULL ,
-date DATE default SYSDATE(),
-project_member_tier varchar(5) NOT NULL ,
-constraint foreign key (owner_id) references user(id)
+CREATE TABLE project_members (
+project_id INT NOT NULL,
+user_id VARCHAR(255) NOT NULL,
+PRIMARY KEY (project_id, user_id),
+CONSTRAINT FK_project_members_project FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE,
+CONSTRAINT FK_project_members_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE TABLE chat(
-user_id varchar(25) NOT NULL,
-content varchar(5000),
-username varchar(36) NOT NULL UNIQUE ,
-timestamp date default SYSDATE(),
-room_id int NOT NULL AUTO_INCREMENT PRIMARY KEY ,
-constraint fk_user foreign key (user_id) references user(id)
+CREATE TABLE chat_rooms (
+id VARCHAR(255) PRIMARY KEY NOT NULL,
+int_id INT UNIQUE NOT NULL,
+name VARCHAR(255),
+description VARCHAR(255),
+type VARCHAR(50),
+last_message VARCHAR(255),
+last_message_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+color VARCHAR(20)
 );
 
-CREATE TABLE task(
-task_no int PRIMARY KEY NOT NULL ,
-project_title varchar(100),
-assignee_id varchar(25),
-task_title varchar(100) NOT NULL ,
-description varchar(1000),
-due_start date default SYSDATE(),
-due_end date
+CREATE TABLE chat_messages (
+message_id VARCHAR(255) PRIMARY KEY NOT NULL,
+chat_room_id VARCHAR(255) NOT NULL,
+sender_id VARCHAR(255) NOT NULL,
+username VARCHAR(255) NOT NULL,
+content VARCHAR(1000) NOT NULL,
+timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+CONSTRAINT FK_chat_messages_chatroom FOREIGN KEY (chat_room_id) REFERENCES chat_rooms(id) ON DELETE CASCADE,
+CONSTRAINT FK_chat_messages_sender FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-commit;
+CREATE TABLE user_chat_rooms (
+id VARCHAR(255) PRIMARY KEY NOT NULL,
+user_id VARCHAR(255) NOT NULL,
+chat_room_id VARCHAR(255) NOT NULL,
+unread_count INT DEFAULT 0,
+last_read_message_id VARCHAR(255),
+UNIQUE (user_id, chat_room_id),
+CONSTRAINT FK_user_chat_rooms_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+CONSTRAINT FK_user_chat_rooms_chatroom FOREIGN KEY (chat_room_id) REFERENCES chat_rooms(id) ON DELETE CASCADE,
+CONSTRAINT FK_user_chat_rooms_last_read_message FOREIGN KEY (last_read_message_id) REFERENCES chat_messages(message_id) ON DELETE SET NULL
+);
 
-ALTER TABLE chat
-MODIFY COLUMN timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+CREATE TABLE tasks (
+task_no INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+project_id INT,
+assignee_id VARCHAR(255),
+task_title VARCHAR(100) NOT NULL,
+description VARCHAR(1000),
+due_start DATE DEFAULT (CURRENT_DATE),
+due_end DATE,
+task_content LONGTEXT,
+created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+                       CONSTRAINT FK_task_project FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE SET NULL,
+                       CONSTRAINT FK_task_assignee FOREIGN KEY (assignee_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+COMMIT;
+
