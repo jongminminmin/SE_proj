@@ -124,6 +124,7 @@ const Chat = () => {
     const [chatRoomsError, setChatRoomsError] = useState('');
     const [participantsLoading, setParticipantsLoading] = useState(false);
 
+    // 전체 사용자 목록 관련
     const [allUsers, setAllUsers] = useState([]);
     const [allUsersLoading, setAllUsersLoading] = useState(false);
     const [allUsersError, setAllUsersError] = useState('');
@@ -214,6 +215,7 @@ const Chat = () => {
         }
     }, [currentUser, currentChatRoom]);
 
+    // 전체 사용자 목록 조회
     useEffect(() => {
         if (currentUser && currentUser.id) {
             const fetchAllUsers = async () => {
