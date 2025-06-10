@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, User, Calendar, Flag, MoreHorizontal, ChevronRight, ChevronLeft, Search } from 'lucide-react';
-import styles from './Task.css';
+import { Plus, User, Calendar, Flag, MoreHorizontal, ChevronRight, ChevronLeft, Search, Folder, MessageCircle, Settings } from 'lucide-react';
+import styles from './Main.module.css';
+import defaultProfile from '../assets/default-profile.png';
 
-const columnOrder = ['todo', 'progress', 'done'];
+const columnOrder = ['todo', 'progress', 'review', 'done'];
 const columnTitles = {
-  todo: '할 일',
+  todo: '해야 할 일',
   progress: '진행 중',
+  review: '검토 중',
   done: '완료',
 };
 
@@ -35,6 +37,7 @@ const Task = () => {
   const [projectMembers, setProjectMembers] = useState([]);
   const [connectedUsers, setConnectedUsers] = useState(new Set());
   const [assigneeSearchTerm, setAssigneeSearchTerm] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const filteredMembers = projectMembers.filter(member =>
   member.username.toLowerCase().includes(assigneeSearchTerm.toLowerCase())
@@ -197,60 +200,152 @@ const Task = () => {
     );
   };
 
+  useEffect(() => {
+    const columns = document.querySelectorAll('.kanban-hover');
+    columns.forEach(col => {
+      const btn = col.querySelector('.kanban-add-btn');
+      if (btn) btn.style.display = 'inline-block';
+    });
+    return () => {
+      columns.forEach(col => {
+        const btn = col.querySelector('.kanban-add-btn');
+        if (btn) btn.style.display = 'none';
+      });
+    };
+  }, []);
+
   return (
-      <div className="task-board">
-        {/* Header */}
-        <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1 className="header-title">{projectTitle || ''}</h1>
-          </div>
-          <button onClick={handleLogout} style={{ padding: '8px 16px', background: '#007aff', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 500, fontSize: '14px', cursor: 'pointer', height: '40px' }}>로그아웃</button>
+    <div className={styles.wrapper}>
+      {/* 사이드바 */}
+      <aside className={styles.sidebar} style={{ width: sidebarOpen ? 240 : 56, transition: 'width 0.2s' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: sidebarOpen ? 'space-between' : 'center', padding: '0 12px 0 8px', marginBottom: 24 }}>
+          {sidebarOpen && <div className={styles.sidebarTitle}>MATE</div>}
+          <button onClick={() => setSidebarOpen(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+            <span style={{ fontSize: 20 }}>{sidebarOpen ? '<' : '>'}</span>
+          </button>
         </div>
-        {/* 프로젝트 현황 */}
-        <div className="project-status">
-          <h3 className="status-title">프로젝트 현황</h3>
-          <div className="status-grid">
-            <div className="status-item">
-              <div className="status-number status-blue">{tasks.length}</div>
-              <div className="status-label">전체 작업</div>
-            </div>
-            <div className="status-item">
-              <div className="status-number status-yellow">{getColumnTasks('progress').length}</div>
-              <div className="status-label">진행 중</div>
-            </div>
-            <div className="status-item">
-              <div className="status-number status-green">{getColumnTasks('done').length}</div>
-              <div className="status-label">완료</div>
-            </div>
-            <div className="status-item">
-              <div className="status-number status-purple">
-                {tasks.length > 0 ? Math.round((getColumnTasks('done').length / tasks.length) * 100) + '%' : '0%'}
-              </div>
-              <div className="status-label">진행률</div>
-            </div>
+        <ul className={styles.sidebarMenu} style={{ alignItems: sidebarOpen ? 'flex-start' : 'center' }}>
+          <li className={styles.sidebarMenuItem}>
+            <Folder size={22} style={{ marginRight: sidebarOpen ? 12 : 0 }} />
+            {sidebarOpen && 'Project'}
+          </li>
+          <li className={styles.sidebarMenuItem} onClick={() => navigate('/chat')}>
+            <MessageCircle size={22} style={{ marginRight: sidebarOpen ? 12 : 0 }} />
+            {sidebarOpen && 'Chat'}
+          </li>
+          <li className={styles.sidebarMenuItem}>
+            <Settings size={22} style={{ marginRight: sidebarOpen ? 12 : 0 }} />
+            {sidebarOpen && 'Settings'}
+          </li>
+        </ul>
+      </aside>
+      {/* 메인 컨텐츠 */}
+      <main className={styles.mainContent}>
+        {/* 상단 바 */}
+        <div className={styles.header}>
+          <div className={styles.titleBox}>
+            <span className={styles.title}>{projectTitle || '업무'}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <img
+              src={defaultProfile}
+              alt="프로필"
+              style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', background: '#e5e7eb', border: '1.5px solid #d1d5db' }}
+            />
+            <button onClick={handleLogout} className={styles.logoutBtn} style={{ marginLeft: 8 }}>로그아웃</button>
           </div>
         </div>
-        {/* Kanban Board */}
-        <div className="kanban-board">
+        {/* 프로젝트 현황 표 */}
+        <table style={{ width: '100%', background: '#fff', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.08)', marginBottom: 24, borderCollapse: 'separate', borderSpacing: 0 }}>
+          <thead>
+            <tr style={{ background: '#f5f7fa', fontWeight: 600, fontSize: 15 }}>
+              <th style={{ padding: '16px 0', textAlign: 'center' }}>전체 작업</th>
+              <th style={{ padding: '16px 0', textAlign: 'center' }}>진행 중</th>
+              <th style={{ padding: '16px 0', textAlign: 'center' }}>완료</th>
+              <th style={{ padding: '16px 0', textAlign: 'center' }}>진행률</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style={{ fontWeight: 500, fontSize: 18 }}>
+              <td style={{ padding: '16px 0', textAlign: 'center', color: '#2563eb' }}>{tasks.length}</td>
+              <td style={{ padding: '16px 0', textAlign: 'center', color: '#d97706' }}>{getColumnTasks('progress').length}</td>
+              <td style={{ padding: '16px 0', textAlign: 'center', color: '#059669' }}>{getColumnTasks('done').length}</td>
+              <td style={{ padding: '16px 0', textAlign: 'center', color: '#7c3aed' }}>{tasks.length > 0 ? Math.round((getColumnTasks('done').length / tasks.length) * 100) + '%' : '0%'}</td>
+            </tr>
+          </tbody>
+        </table>
+        {/* 칸반 보드 */}
+        <div style={{ display: 'flex', gap: 12, height: 'calc(100vh - 220px)' }}>
           {columnOrder.map((col) => (
-              <div key={col} className={`column ${col}-column`}>
-                <div className="column-header">
-                  <h3 className="column-title">
-                    {columnTitles[col]}
-                    <span className="task-count">{getColumnTasks(col).length}</span>
-                  </h3>
-                  {col === 'todo' && (
-                      <button onClick={() => { setSelectedColumn(col); setTaskForm({ ...taskForm, status: col }); setNewTaskModal(true); }} className="add-task-btn">
-                        <Plus size={18} />
-                      </button>
-                  )}
-                </div>
-                <div className="tasks-container">
-                  {getColumnTasks(col).map((task) => (
-                      <TaskCard key={task.taskNo} task={task} />
-                  ))}
-                </div>
+            <div
+              key={col}
+              style={{
+                flex: 1,
+                background: '#fafbfc',
+                borderRadius: 12,
+                padding: 16,
+                minWidth: 220,
+                display: 'flex',
+                flexDirection: 'column',
+                position: 'relative',
+                minHeight: 120,
+                transition: 'min-height 0.2s, height 0.2s',
+                height: getColumnTasks(col).length > 0 ? undefined : 120,
+              }}
+              onMouseEnter={e => e.currentTarget.classList.add('kanban-hover')}
+              onMouseLeave={e => e.currentTarget.classList.remove('kanban-hover')}
+            >
+              {/* 컬럼 헤더 */}
+              <div style={{ fontWeight: 600, fontSize: 17, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6, position: 'relative' }}>
+                {columnTitles[col]}
+                {col === 'done' && <span style={{ color: '#6bb700', fontSize: 18, marginLeft: 2 }}>✔</span>}
+                <span style={{ color: '#888', fontWeight: 400, fontSize: 14, marginLeft: 6 }}>{getColumnTasks(col).length > 0 ? getColumnTasks(col).length : ''}</span>
+                {/* + 만들기 버튼 (hover 시만 보임) */}
+                <button
+                  style={{
+                    display: 'none',
+                    position: 'absolute',
+                    right: 0,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: '#2563eb',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 6,
+                    padding: '4px 12px',
+                    fontWeight: 500,
+                    fontSize: 15,
+                    cursor: 'pointer',
+                    zIndex: 2
+                  }}
+                  className="kanban-add-btn"
+                  onClick={() => { setSelectedColumn(col); setTaskForm({ ...taskForm, status: col }); setNewTaskModal(true); }}
+                >+ 만들기</button>
               </div>
+              {/* 카드 리스트 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {getColumnTasks(col).map((task) => (
+                  <div key={task.taskNo} style={{ background: '#fff', borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.07)', border: '1px solid #e5e7eb', padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ fontWeight: 500, fontSize: 15, marginBottom: 4 }}>{task.taskTitle}</div>
+                    <div style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>{task.description}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 2, color: '#8ca600', fontSize: 15 }}>
+                          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="14" height="14" rx="3" fill="#e6f4d7"/><rect x="5" y="5" width="8" height="8" rx="2" fill="#c2e0b4"/></svg>
+                        </span>
+                        <span style={{ color: '#888', fontSize: 13 }}>{task.code || `KAN-${task.taskNo}`}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ color: '#888', fontSize: 16 }}>=</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" fill="#f4f5f7" stroke="#b3bac5"/><path d="M9 9.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 1c-1.33 0-4 0.67-4 2v1h8v-1c0-1.33-2.67-2-4-2Z" fill="#b3bac5"/></svg>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
         {/* 새 작업 추가 모달 */}
@@ -372,7 +467,8 @@ const Task = () => {
               </div>
             </div>
         )}
-      </div>
+      </main>
+    </div>
   );
 };
 

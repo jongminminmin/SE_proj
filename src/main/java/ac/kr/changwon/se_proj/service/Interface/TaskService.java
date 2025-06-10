@@ -1,6 +1,7 @@
 package ac.kr.changwon.se_proj.service.Interface;
 
 import ac.kr.changwon.se_proj.model.Task;
+import ac.kr.changwon.se_proj.dto.TaskDTO;
 
 import java.util.List;
 
@@ -11,4 +12,6 @@ public interface TaskService {
     void deleteById(Integer id);
 
     List<Task> getTasksDueTomorrow();
+
+    TaskDTO convertToDTO(Task task);
 }

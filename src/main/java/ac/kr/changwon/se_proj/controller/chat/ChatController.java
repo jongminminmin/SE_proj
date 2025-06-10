@@ -7,6 +7,8 @@ import lombok.Getter;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.stereotype.Controller;
+import ac.kr.changwon.se_proj.dto.ChatRoomDTO;
+import ac.kr.changwon.se_proj.dto.ChatMessageDTO;
 
 import java.time.LocalDateTime;
 
