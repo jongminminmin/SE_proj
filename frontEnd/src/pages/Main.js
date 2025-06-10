@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
 import styles from './Main.module.css';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Plus, Folder, MessageCircle, Settings } from 'lucide-react';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
+import defaultProfile from '../assets/default-profile.png'; // 기본 프로필 이미지 경로(없으면 public 경로 사용)
 
 function Main() {
   const [tab, setTab] = useState('all');
@@ -16,8 +19,10 @@ function Main() {
     date: '',
   });
   const [projects, setProjects] = useState([]);
+  const [calendarValue, setCalendarValue] = useState(new Date());
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // 프로젝트 목록 불러오기
   const fetchProjects = async () => {
@@ -32,60 +37,21 @@ function Main() {
 
   // 로그아웃 함수 정의
   const handleLogout = async () => {
-    console.log('Logout process started...'); // 로그: 로그아웃 시작
-
-    // 1. 로컬 스토리지에서 토큰 제거
+    localStorage.removeItem('token');
     try {
-      localStorage.removeItem('token');
-      console.log('Token removed from localStorage.');
-    } catch (e) {
-      console.error('Error removing token from localStorage:', e);
-    }
-
-    // 2. 서버 측 로그아웃 API 호출 (Spring Security의 /logout은 보통 POST)
-    try {
-      const response = await fetch('/logout', { // Spring Security의 기본 로그아웃 URL
-        method: 'POST',
-        // Spring Security와 세션 쿠키를 사용한다면 credentials 옵션이 필요할 수 있습니다.
-        // credentials: 'include',
-        // CSRF 보호가 활성화되어 있다면, CSRF 토큰을 헤더에 포함해야 합니다.
-        // headers: {
-        //   'X-CSRF-TOKEN': csrfToken, // CSRF 토큰을 가져오는 방식에 따라 다름
-        // },
-      });
-
-      if (response.ok) {
-        // 서버 로그아웃 성공 (HTTP 상태 코드 2xx)
-        console.log('Server logout successful. Status:', response.status, 'Redirected:', response.redirected);
-      } else {
-        // 서버 로그아웃 실패 (HTTP 상태 코드가 2xx가 아님)
-        console.warn('Server logout failed. Status:', response.status);
-      }
-    } catch (error) {
-      // 네트워크 오류 등으로 서버 로그아웃 API 호출 자체가 실패한 경우
-      console.error('Error during server logout API call:', error);
-    } finally {
-      // 3. 로그인 페이지로 리디렉션 (서버 응답과 관계없이 항상 실행되도록 finally에 위치)
-      console.log('Navigating to /login page.');
-      navigate('/login');
-    }
+      await fetch('/logout', { method: 'POST' });
+    } catch {}
+    navigate('/login');
   };
 
-  // ESLint: 'filteredProjects' is defined here.
-  // 이 변수는 현재 선택된 탭에 따라 projectList를 필터링합니다.
-  const filteredProjects =
-      tab === 'all'
-          ? projects
-          : projects.filter((p) => p.status === tab);
+  const filteredProjects = tab === 'all' ? projects : projects.filter((p) => p.status === tab);
 
-  // 알림 더미 데이터
   const notifications = [
     { id: 1, text: '새로운 할 일이 등록되었습니다.' },
     { id: 2, text: '프로젝트 베타의 마감일이 다가옵니다.' },
     { id: 3, text: '팀원이 댓글을 남겼습니다.' },
   ];
 
-  // 프로젝트 추가/수정
   const handleAddOrEditProject = async () => {
     if (!newProject.projectTitle.trim() || !newProject.date) {
       alert('프로젝트 명과 마감일은 필수입니다.');
@@ -99,14 +65,12 @@ function Main() {
       projectMemberTier: 'member',
     };
     if (editMode && editProjectId) {
-      // 수정
       await fetch('/api/projects', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...dto, projectId: editProjectId })
       });
     } else {
-      // 추가
       await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -120,14 +84,12 @@ function Main() {
     fetchProjects();
   };
 
-  // 삭제
   const handleDeleteProject = async (projectId) => {
     if (!window.confirm('정말 삭제하시겠습니까?')) return;
     await fetch(`/api/projects/${projectId}`, { method: 'DELETE' });
     fetchProjects();
   };
 
-  // 수정 모달 열기
   const openEditModal = (project) => {
     setEditMode(true);
     setEditProjectId(project.projectId);
@@ -141,63 +103,75 @@ function Main() {
 
   return (
     <div className={styles.wrapper}>
-      <aside className={styles.sidebar}>
-        <div className={styles.sidebarTitle}>MATE</div>
-        <ul className={styles.sidebarMenu}>
-          <li className={`${styles.sidebarMenuItem} ${styles.active}`} onClick={() => setProjectOpen((v) => !v)}>
-            <span role="img" aria-label="project" className={styles.icon}>📋</span> Project
+      {/* 사이드바 */}
+      <aside className={styles.sidebar} style={{ width: sidebarOpen ? 240 : 56, transition: 'width 0.2s' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: sidebarOpen ? 'space-between' : 'center', padding: '0 12px 0 8px', marginBottom: 24 }}>
+          {sidebarOpen && <div className={styles.sidebarTitle}>MATE</div>}
+          <button onClick={() => setSidebarOpen(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+            <span style={{ fontSize: 20 }}>{sidebarOpen ? '<' : '>'}</span>
+          </button>
+        </div>
+        <ul className={styles.sidebarMenu} style={{ alignItems: sidebarOpen ? 'flex-start' : 'center' }}>
+          <li className={styles.sidebarMenuItem}>
+            <Folder size={22} style={{ marginRight: sidebarOpen ? 12 : 0 }} />
+            {sidebarOpen && 'Project'}
           </li>
-          {projectOpen && (
-            <ul className={styles.sidebarSubMenu}>
-              <li className={styles.sidebarSubMenuItem} onClick={() => navigate('/task')}>
-                <span role="img" aria-label="task" className={styles.iconSub}>📝</span> Task
-              </li>
-            </ul>
-          )}
           <li className={styles.sidebarMenuItem} onClick={() => navigate('/chat')}>
-            <span role="img" aria-label="chat" className={styles.icon}>💬</span> Chat
+            <MessageCircle size={22} style={{ marginRight: sidebarOpen ? 12 : 0 }} />
+            {sidebarOpen && 'Chat'}
           </li>
           <li className={styles.sidebarMenuItem}>
-            <span role="img" aria-label="settings" className={styles.icon}>⚙️</span> Settings
+            <Settings size={22} style={{ marginRight: sidebarOpen ? 12 : 0 }} />
+            {sidebarOpen && 'Settings'}
           </li>
         </ul>
       </aside>
+      {/* 메인 컨텐츠 */}
       <main className={styles.mainContent}>
-        {/* 상단 헤더에 로그아웃 버튼 추가 */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '16px' }}>
-          <button onClick={handleLogout} className={styles.logoutBtn} style={{ padding: '8px 16px', background: '#007aff', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 500, fontSize: '14px', cursor: 'pointer', height: '40px' }}>로그아웃</button>
+        {/* 상단 바 */}
+        <div className={styles.header}>
+          <div className={styles.titleBox}>
+            <span className={styles.title}>프로젝트</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <img
+              src={defaultProfile}
+              alt="프로필"
+              style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', background: '#e5e7eb', border: '1.5px solid #d1d5db' }}
+            />
+            <button onClick={handleLogout} className={styles.logoutBtn} style={{ marginLeft: 8 }}>로그아웃</button>
+          </div>
         </div>
+        {/* 본문 영역: 좌우 분할 */}
         <div className={styles.splitLayout}>
-          {/* 왼쪽: 프로젝트 리스트 */}
-          <div className={styles.projectListSection}>
-            <h2 className={styles.sectionTitle}>프로젝트 목록</h2>
-            <ul className={styles.projectList}>
-              {projects.map((p, i) => (
-                <li
-                  key={p.projectId || i}
-                  className={styles.projectListItem}
-                  onClick={() => navigate(`/task?project=${encodeURIComponent(p.projectTitle)}`)}
-                >
-                  <span className={styles.projectDot} style={{backgroundColor: p.color || '#007aff'}}></span>
-                  {p.projectTitle}
-                  <button
-                    className={`${styles.projectActionBtn} ${styles.projectEditBtn}`}
-                    title="수정"
-                    onClick={e => {e.stopPropagation(); openEditModal(p);}}
+          {/* 좌측: 프로젝트 표 */}
+          <div className={styles.projectListSection} style={{ minWidth: 350, maxWidth: 600, flex: 2 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+              <thead>
+                <tr style={{ background: '#f5f7fa', color: '#333', fontWeight: 600, fontSize: 15 }}>
+                  <th style={{ padding: '12px 8px', textAlign: 'left' }}>이름</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'left' }}>프로젝트 내용</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'left' }}>리더</th>
+                </tr>
+              </thead>
+              <tbody>
+                {projects.map((p, i) => (
+                  <tr
+                    key={p.projectId || i}
+                    style={{ cursor: 'pointer', borderBottom: '1px solid #f0f0f0', transition: 'background 0.15s' }}
+                    onClick={() => navigate(`/task?project=${encodeURIComponent(p.projectTitle)}&projectId=${encodeURIComponent(p.projectId)}`)}
                   >
-                    <Pencil size={16} style={{marginRight: 2}} /> 수정
-                  </button>
-                  <button
-                    className={`${styles.projectActionBtn} ${styles.projectDeleteBtn}`}
-                    title="삭제"
-                    onClick={e => {e.stopPropagation(); handleDeleteProject(p.projectId);}}
-                  >
-                    <Trash2 size={16} style={{marginRight: 2}} /> 삭제
-                  </button>
-                </li>
-              ))}
-            </ul>
-            {/* 프로젝트 추가 문구 */}
+                    <td style={{ padding: '10px 8px', fontWeight: 500 }}>
+                      <span className={styles.projectDot} style={{ backgroundColor: p.color || '#007aff', marginRight: 8 }}></span>
+                      {p.projectTitle}
+                    </td>
+                    <td style={{ padding: '10px 8px', color: '#555', fontSize: 14 }}>{p.description || '-'}</td>
+                    <td style={{ padding: '10px 8px' }}>{p.leader || currentUser?.name || '관리자'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {/* + 프로젝트 추가 문구 */}
             <div
               className={styles.addProjectText}
               style={{ color: '#2563eb', marginTop: '16px', cursor: 'pointer', fontWeight: 500 }}
@@ -206,7 +180,7 @@ function Main() {
               + 프로젝트 추가
             </div>
           </div>
-          {/* 오른쪽: 알림 */}
+          {/* 우측: 알림 + 캘린더 */}
           <div className={styles.rightSection}>
             <div className={styles.notificationBox}>
               <h3 className={styles.notificationTitle}>알림</h3>
@@ -215,6 +189,16 @@ function Main() {
                   <li key={n.id} className={styles.notificationItem}>{n.text}</li>
                 ))}
               </ul>
+            </div>
+            <div className={styles.calendarBox} style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'stretch', height: '100%' }}>
+              <Calendar
+                onChange={setCalendarValue}
+                value={calendarValue}
+                className={styles.reactCalendar}
+                locale="ko-KR"
+                style={{ flex: 1, width: '100%', height: '100%' }}
+                tileContent={null}
+              />
             </div>
           </div>
         </div>

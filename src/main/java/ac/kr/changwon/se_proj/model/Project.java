@@ -31,7 +31,7 @@ public class Project {
     @Temporal(TemporalType.DATE)
     private Date date;
 
-    @Column(nullable = false)
+    @Column(name = "project_member_tier", nullable = false)
     private String projectMemberTier;
 
     //프로젝트 멤버(다대다관계)

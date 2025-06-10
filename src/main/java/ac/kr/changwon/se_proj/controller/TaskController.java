@@ -3,9 +3,11 @@ package ac.kr.changwon.se_proj.controller;
 
 import ac.kr.changwon.se_proj.model.Task;
 import ac.kr.changwon.se_proj.service.Interface.TaskService;
+import ac.kr.changwon.se_proj.dto.TaskDTO;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/tasks")
@@ -18,23 +20,23 @@ public class TaskController {
     }
 
     @GetMapping("/")
-    public List<Task> getAll() {
-        return taskService.findAll();
+    public List<TaskDTO> getAll() {
+        return taskService.findAll().stream().map(taskService::convertToDTO).collect(Collectors.toList());
     }
 
     @GetMapping("/{id}")
-    public Task getById(@PathVariable Integer id) {
-        return taskService.findById(id);
+    public TaskDTO getById(@PathVariable Integer id) {
+        return taskService.convertToDTO(taskService.findById(id));
     }
 
     @PostMapping
-    public Task create(@RequestBody Task task) {
-        return taskService.save(task);
+    public TaskDTO create(@RequestBody Task task) {
+        return taskService.convertToDTO(taskService.save(task));
     }
 
     @PutMapping
-    public Task update(@RequestBody Task task) {
-        return taskService.save(task);
+    public TaskDTO update(@RequestBody Task task) {
+        return taskService.convertToDTO(taskService.save(task));
     }
 
     @DeleteMapping
@@ -43,8 +45,8 @@ public class TaskController {
     }
 
     @GetMapping("/due-tomorrow")
-    public List<Task> getTasksDueTomorrow() {
-        return taskService.getTasksDueTomorrow();
+    public List<TaskDTO> getTasksDueTomorrow() {
+        return taskService.getTasksDueTomorrow().stream().map(taskService::convertToDTO).collect(Collectors.toList());
     }
 
 }
