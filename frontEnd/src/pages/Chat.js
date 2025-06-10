@@ -19,7 +19,7 @@ const Smile = ({ className }) => (
 );
 
 const MoreVertical = ({ className }) => (
-    <svg className className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="1"/>
         <circle cx="12" cy="5" r="1"/>
         <circle cx="12" cy="19" r="1"/>
@@ -124,6 +124,7 @@ const Chat = () => {
     const [chatRoomsError, setChatRoomsError] = useState('');
     const [participantsLoading, setParticipantsLoading] = useState(false);
 
+    // 전체 사용자 목록 관련
     const [allUsers, setAllUsers] = useState([]);
     const [allUsersLoading, setAllUsersLoading] = useState(false);
     const [allUsersError, setAllUsersError] = useState('');
@@ -136,6 +137,269 @@ const Chat = () => {
     const messagesEndRef = useRef(null);
 
     const [connectedUsers, setConnectedUsers] = useState([]);
+
+    const [showChatTypeModal, setShowChatTypeModal] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [chatType, setChatType] = useState('private');
+    const [groupName, setGroupName] = useState('');
+    //우클릭 관련 상태 추가
+    const [contextMenu, setContextMenu] = useState(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [roomToDelete, setRoomToDelete] = useState(null);
+
+    //상태 변수 추가
+    const [messagesLoading, setMessagesLoading] = useState(false);
+    const [lastReadMessageIds, setLastReadMessageIds] = useState({});// 각 방의 마지막 읽은 메시지 ID
+
+
+
+    //우클릭 핸들러
+    const handleRoomRightClick = (e, room) => {
+        e.preventDefault();
+        setContextMenu({
+            x: e.clientX,
+            y: e.clientY,
+            room: room
+        });
+    };
+
+    // 컨텍스트 메뉴 외부 클릭 시 닫기
+    const handleCloseContextMenu = () => {
+        setContextMenu(null);
+    };
+
+    // 삭제 확인 모달 열기
+    const handleDeleteRoom = (room) => {
+        setRoomToDelete(room);
+        setShowDeleteConfirm(true);
+        setContextMenu(null);
+    };
+
+
+    //채팅 유형 선택 모달
+    const ChatTypeModal = () => (
+        <div className="modal-overlay">
+            <div className="modal-card">
+                <h3>{selectedUser?.username}와의 채팅 생성</h3>
+                <div className="form-group">
+                    <label>
+                        <input
+                            type="radio"
+                            value="private"
+                            checked={chatType === 'private'}
+                            onChange={e => setChatType(e.target.value)}
+                        />
+                        1:1 개인채팅
+                    </label>
+                    <label>
+                        <input
+                            type="radio"
+                            value="group"
+                            checked={chatType === 'group'}
+                            onChange={e => setChatType(e.target.value)}
+                        />
+                        그룹채팅
+                    </label>
+                </div>
+
+                {chatType === 'group' && (
+                    <div className="form-group">
+                        <input
+                            text="text"
+                            placeholder={groupName}
+                            onChange={e => setGroupName(e.target.value)}
+                            required
+                        />
+                    </div>
+                )}
+                <div className="modal-actions">
+                    <button onClick={() => {
+                        setShowChatTypeModal(false);
+                        setGroupName('')
+                    }}>취소</button>
+                    <button onClick={handleCreateChatConfirm}>생성</button>
+                </div>
+            </div>
+        </div>
+    );
+
+    const handleCreateChatConfirm = async () => {
+        if(!currentUser || !selectedUser) return;
+
+        const requestBody = {
+            type: chatType.toUpperCase(),
+            user2Id: selectedUser.id,
+        };
+
+        if (chatType === 'group') {
+            requestBody.groupName = groupName;
+            requestBody.participants = [currentUser.id, selectedUser.id];
+        }
+
+        try {
+            const response = await fetch('/api/chats/create-room', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(requestBody)
+            });
+
+            if (response.ok) {
+                const roomData = await response.json();
+                setChatRooms(prev => [...prev, roomData]);
+                setCurrentChatRoom(roomData.id);
+                setShowChatTypeModal(false);
+            }
+        } catch (error) {
+            console.error("채팅방 생성 실패:", error);
+        }
+    }
+
+    //채팅방 삭제
+    const handleConfirmDelete = async () => {
+        if (!roomToDelete) return;
+
+        try {
+            const response = await fetch(`/api/chats/rooms/${roomToDelete.id}`, {
+                method: 'DELETE',
+                headers: {'Content-Type': 'application/json'}
+            });
+
+            if (response.ok) {
+                // 삭제된 방을 채팅방 목록에서 제거
+                setChatRooms(prev => prev.filter(room => room.id !== roomToDelete.id));
+
+                // 현재 채팅방이 삭제된 방이면 다른 방으로 이동
+                if (currentChatRoom === roomToDelete.id) {
+                    const remainingRooms = chatRooms.filter(room => room.id !== roomToDelete.id);
+                    setCurrentChatRoom(remainingRooms.length > 0 ? remainingRooms[0].id : null);
+                }
+
+                console.log(`채팅방 "${roomToDelete.name}" 삭제 완료`);
+            } else {
+                console.error("채팅방 삭제 실패:", response.status);
+                alert("채팅방 삭제에 실패했습니다.");
+            }
+        } catch (error) {
+            console.error("채팅방 삭제 중 오류:", error);
+            alert("네트워크 오류로 채팅방을 삭제할 수 없습니다.");
+        } finally {
+            setShowDeleteConfirm(false);
+            setRoomToDelete(null);
+        }
+    };
+
+    //컨텍스트 메뉴 컴포넌트
+    const ContextMenu = () => {
+        if (!contextMenu) return null;
+
+        return (
+            <div
+                className="context-menu"
+                style={{
+                    position: 'fixed',
+                    top: contextMenu.y,
+                    left: contextMenu.x,
+                    zIndex: 1000
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="context-menu-item" onClick={() => handleDeleteRoom(contextMenu.room)}>
+                    <span className="context-menu-icon">🗑️</span>
+                    채팅방 삭제
+                </div>
+            </div>
+        );
+    };
+    //삭제 확인 모달
+    const DeleteConfirmModal = () => {
+        if (!showDeleteConfirm || !roomToDelete) return null;
+
+        return (
+            <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
+                <div
+                    className="modal-card"
+                    onClick={(e) => e.stopPropagation()} // 모달 내부 클릭 시 전파 중단
+                >
+                    <h3>채팅방 삭제</h3>
+                    <p>"{roomToDelete.name}" 채팅방을 삭제하시겠습니까?</p>
+                    <p className="delete-warning">이 작업은 되돌릴 수 없습니다.</p>
+
+                    <div className="modal-actions">
+                        <button
+                            className="cancel-button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowDeleteConfirm(false);
+                            }}
+                        >
+                            취소
+                        </button>
+                        <button
+                            className="delete-button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleConfirmDelete();
+                            }}
+                        >
+                            삭제
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+
+    // 채팅방 아이템 렌더링 부분 수정
+    const renderRoomItem = (room) => (
+        <div
+            key={room.id}
+            className={`room-item ${currentChatRoom === room.id ? 'active' : ''}`}
+            onClick={() => handleRoomChange(room.id)}
+            onContextMenu={(e) => handleRoomRightClick(e, room)} // 우클릭 이벤트 추가
+        >
+            <div className="room-content">
+                <div className="room-avatar" style={{backgroundColor: room.color || '#6c757d'}}>
+                    <Hash className="room-icon" />
+                </div>
+                <div className="room-info">
+                    <div className="room-header">
+                        <h4 className="room-name">{room.name}</h4>
+                        {room.unreadCount > 0 && (
+                            <span className="unread-badge">{room.unreadCount}</span>
+                        )}
+                    </div>
+                    <p className="room-description">{room.description}</p>
+                    <p className="room-last-message">{room.lastMessage}</p>
+                    <div className="room-footer">
+                        <span className="last-message-time">{room.lastMessageTime}</span>
+                        <span className="participants-count">
+            <Users className="participants-icon" />
+                            {room.participants}명
+          </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    //전역 클릭 이벤트 리스너
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (contextMenu) {
+                //컨텍스트 메뉴 영역 클릭은 제외
+                const contextMenuElement = event.target.closest('.context-menu');
+                if(!contextMenuElement) {
+                    setContextMenu(null);
+                }
+            }
+        };
+
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, [contextMenu]);
+
+
 
 
     const scrollToBottom = useCallback(() => {
@@ -214,6 +478,7 @@ const Chat = () => {
         }
     }, [currentUser, currentChatRoom]);
 
+    // 전체 사용자 목록 조회
     useEffect(() => {
         if (currentUser && currentUser.id) {
             const fetchAllUsers = async () => {
@@ -270,7 +535,7 @@ const Chat = () => {
             const fetchRoomParticipants = async () => {
                 setParticipantsLoading(true);
                 try {
-                    const response = await fetch(`/api/chat/rooms/${currentChatRoom}/participants`);
+                    const response = await fetch(`/api/chats/rooms/${currentChatRoom}/participants`);
                     if (response.ok) {
                         const participantsData = await response.json();
                         setRoomParticipants(prev => ({
@@ -290,8 +555,7 @@ const Chat = () => {
         }
     }, [currentChatRoom, currentUser]);
 
-
-    // --- STOMP 클라이언트 연결 로직 ---
+// --- STOMP 클라이언트 연결 로직 ---
     useEffect(() => {
         if (!currentUser || !currentUser.name) {
             console.log("STOMP (Basic): currentUser 정보가 없어 연결 시도 안 함.");
@@ -334,8 +598,8 @@ const Chat = () => {
                 console.log(new Date(), 'STOMP DEBUG (Basic): ', str);
             },
             reconnectDelay: 5000,
-            heartbeatIncoming: 4000,
-            heartbeatOutgoing: 4000,
+            heartbeatIncoming: 15000, // 15초로 증가 (연결 안정성 향상)
+            heartbeatOutgoing: 15000, // 15초로 증가 (연결 안정성 향상)
             onConnect: (frame) => {
                 setIsConnected(true);
                 stompClientRef.current = client;
@@ -360,6 +624,13 @@ const Chat = () => {
             onStompError: (frame) => {
                 console.error('STOMP (Basic): 브로커 오류 발생: ' + frame.headers['message'], frame.body);
                 setIsConnected(false);
+                // 5초 후 자동 재연결 시도
+                setTimeout(() => {
+                    if (!stompClientRef.current?.active) {
+                        console.log("STOMP 오류 후 재연결 시도...");
+                        // 재연결 로직은 useEffect가 다시 실행되면서 자동으로 처리됨
+                    }
+                }, 5000);
             },
             onWebSocketClose: (event) => {
                 console.log('STOMP (Basic): 웹소켓 닫힘.', event);
@@ -381,18 +652,17 @@ const Chat = () => {
                 setIsConnected(false);
             }
         };
-    }, [currentUser]);
+    }, [currentUser, allUsers]);
 
 
     // --- 채팅방 메시지 구독 및 메시지 기록 불러오기 ---
     useEffect(() => {
-        if (!currentUser || !currentUser.id || !currentChatRoom || !stompClientRef.current || !stompClientRef.current.active) {
+        if (!currentUser?.id || !currentChatRoom || !stompClientRef.current?.active) {
             console.log("STOMP (Messages): 메시지 구독을 위한 필수 조건 미충족. 현재 상태:", {
                 currentUser: !!currentUser,
                 currentChatRoom: !!currentChatRoom,
                 stompClientActive: stompClientRef.current?.active
             });
-            return;
         }
 
         const selectedRoomObject = chatRooms.find(room => room.id === currentChatRoom);
@@ -408,11 +678,33 @@ const Chat = () => {
 
         console.log(`STOMP (Messages): 방 ${currentChatRoom}의 메시지 구독 시도 중 (${subscriptionDestination})`);
 
-        // --- 1. 기존 구독 해제 ---
-        if (stompClientRef.current.subscriptions && stompClientRef.current.subscriptions[subscriptionDestination]) {
-            console.log(`기존 구독 ${subscriptionDestination} 해제 중.`);
-            stompClientRef.current.unsubscribe(subscriptionDestination);
+        // 기존 구독이 있으면 해제 (중복 방지)
+        if (window.currentSubscription) {
+            console.log("기존 구독 해제 중...");
+            window.currentSubscription.unsubscribe();
+            window.currentSubscription = null;
         }
+
+        // 약간의 딜레이 후 새 구독 (타이밍 이슈 해결)
+        setTimeout(() => {
+            if (stompClientRef.current?.active && currentChatRoom === selectedRoomObject.id) {
+                window.currentSubscription = stompClientRef.current.subscribe(subscriptionDestination, (message) => {
+                    try {
+                        const receivedMsg = JSON.parse(message.body);
+                        // 메시지 처리 로직...
+                    } catch (error) {
+                        console.error("메시지 수신 처리 실패:", error);
+                    }
+                });
+            }
+        }, 100); // 100ms 딜레이
+
+        return () => {
+            if (window.currentSubscription) {
+                window.currentSubscription.unsubscribe();
+                window.currentSubscription = null;
+            }
+        };
 
         // --- 2. 메시지 기록 불러오기 ---
         const fetchChatHistory = async () => {
@@ -505,6 +797,9 @@ const Chat = () => {
             }
         });
 
+        fetchChatHistory().catch(console.error);
+        markRoomAsRead().catch(console.error);
+
         // Effect 클린업 함수
         return () => {
             if (stompClientRef.current && stompClientRef.current.active && subscription) {
@@ -556,17 +851,125 @@ const Chat = () => {
         }
     };
 
-    const handleRoomChange = (roomId) => {
-        if (roomId !== currentChatRoom) {
-            // 방 변경 시 이전 메시지 상태를 초기화할 필요 없음 (history API가 채울 것임)
-            // setMessages(prev => ({...prev, [roomId]: prev[roomId] || []}));
-            setCurrentChatRoom(roomId);
+    const handleRoomChange = useCallback(async (roomId) => {
+        if(roomId === currentChatRoom) return;
+
+        setMessagesLoading(true);
+        setCurrentChatRoom(roomId);
+
+        //메시지 내역 초기화 후 로드
+        setMessages(prev => ({
+            ...prev,
+            [roomId]: newMessage
+        }));
+
+        //채팅 내역 불러오기
+        try {
+            const response = await fetch(`/api/chats/rooms/${roomId}/messages`);
+            if (response.ok) {
+                const historyData = await response.json();
+                const formattedHistory = historyData.map(msg => ({
+                    id: msg.messageId,
+                    sender: msg.username,
+                    senderId: msg.senderId,
+                    content: msg.content,
+                    time: new Date(msg.timestamp).toLocaleTimeString('ko-KR', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    }),
+                    isOwn: msg.senderId === currentUser.id,
+                    isRead: true, // 기존 메시지는 읽음 처리
+                    avatar: 'https://via.placeholder.com/40'
+                }));
+
+                setMessages(prev => ({
+                    ...prev,
+                    [roomId]: formattedHistory
+                }));
+
+                // 마지막 메시지 ID 저장
+                if (formattedHistory.length > 0) {
+                    const lastMessage = formattedHistory[formattedHistory.length - 1];
+                    setLastReadMessageIds(prev => ({
+                        ...prev,
+                        [roomId]: lastMessage.id
+                    }));
+                }
+            }
+
+            // 2. 읽음 처리 API 호출 후 웹소켓으로 알ㄻ
+            const readResponse = await fetch(`/api/chats/rooms/${roomId}/mark-as-read`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            });
+
+            if (readResponse.ok) {
+                // 채팅방 목록의 unreadCount 업데이트
+                setChatRooms(prev => prev.map(room =>
+                    room.id === roomId ? {...room, unreadCount: 0} : room
+                ));
+
+                // 다른 사용자들에게 읽음 상태 전송
+                if (stompClientRef.current?.active) {
+                    // 웹소켓으로 다른 사용자들에게 읽음 상태 알림
+                    if (stompClientRef.current?.active) {
+                        stompClientRef.current.publish({
+                            destination: `/app/chat.markAsRead/${roomId}`,
+                            body: JSON.stringify({
+                                userId: currentUser.id,
+                                roomId: roomId,
+                                timestamp: new Date().toISOString(),
+                                username: currentUser.name
+                            })
+                        });
+                    }
+                }
+            }
+        }catch (error) {
+            console.error("채팅방 전환 중 오류:", error);
+        } finally {
+            setMessagesLoading(false);
         }
-    };
+
+    },[currentUser, currentChatRoom]);
+
+    //읽음 상태 구독 추가
+    useEffect(() => {
+        if(!currentChatRoom && !stompClientRef.current?.active) return;
+        //읽음 상태 업데이트 구독
+        const readStatusSubscription = stompClientRef.current.subscribe(
+            `/topic/readStatus/${currentChatRoom}`,
+            (message) => {
+                try {
+                    const readData = JSON.parse(message.body);
+
+                    // 다른 사용자가 읽음 처리했을 때 내 메시지들을 읽음으로 표시
+                    if (readData.userId !== currentUser.id) {
+                        setMessages(prev => {
+                            const currentMessages = prev[currentChatRoom] || [];
+                            const updatedMessages = currentMessages.map(msg => {
+                                if (msg.senderId === currentUser.id && !msg.isRead) {
+                                    return { ...msg, isRead: true };
+                                }
+                                return msg;
+                            });
+
+                            return { ...prev, [currentChatRoom]: updatedMessages };
+                        });
+
+                        console.log(`${readData.username}이 메시지를 읽음 처리했습니다.`);
+                    }
+                } catch (error) {
+                    console.error("읽음 상태 업데이트 실패:", error);
+                }
+            }
+        );
+
+        return () => readStatusSubscription?.unsubscribe();
+    },[currentChatRoom, currentUser]);
 
     const getCurrentRoom = () => chatRooms.find(room => room.id === currentChatRoom);
-
-    const getCurrentMessages = () => messages[currentChatRoom] || [];
 
     const getCurrentParticipants = () => {
         const currentRoomKey = currentChatRoom;
@@ -580,63 +983,57 @@ const Chat = () => {
     };
 
     // --- 사이드바 사용자 클릭 핸들러 ---
-    const handleUserClickForChat = async (targetUser) => {
-        if (!currentUser || !currentUser.id) {
-            console.warn("현재 사용자 정보가 없습니다. 1:1 채팅을 시작할 수 없습니다.");
-            return;
-        }
-        if (targetUser.id === currentUser.id.toString()) {
-            console.log("자기 자신과의 채팅은 불가능합니다.");
+    const handleUserClickForChat = (user) => {
+        if(user.id === currentUser.id) return;
+
+        if(user.status !== 'online'){
+            alert(`${user.username}님은 현재 오프라인으로 채팅을 시작할 수 없습니다.`);
             return;
         }
 
-        try {
-            const response = await fetch('/api/chats/create-private-room', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    user1Id: currentUser.id,
-                    user2Id: targetUser.id,
-                }),
-            });
-
-            if (response.ok) {
-                const roomData = await response.json();
-                console.log("1:1 채팅방 생성/입장 성공:", roomData);
-                // 새로운 방을 chatRooms 목록에 추가 (혹시 기존에 없던 방일 경우)
-                setChatRooms(prevRooms => {
-                    const roomExists = prevRooms.some(r => r.id === roomData.id);
-                    if (!roomExists) {
-                        return [...prevRooms, {
-                            id: roomData.id,
-                            intId: roomData.intId,
-                            name: roomData.name, // 서버에서 설정된 방 이름 사용
-                            description: roomData.description,
-                            lastMessage: roomData.lastMessage,
-                            lastMessageTime: roomData.lastMessageTime,
-                            participants: roomData.participants,
-                            unreadCount: roomData.unreadCount, // 초기 0 (서버에서 설정)
-                            color: roomData.color
-                        }];
-                    }
-                    return prevRooms;
-                });
-                // 현재 채팅방을 새로 생성/입장한 방으로 설정
-                setCurrentChatRoom(roomData.id);
-            } else {
-                console.error("1:1 채팅방 생성/입장 실패:", response.status, await response.text());
-                alert("1:1 채팅방 생성/입장 실패!");
-            }
-        } catch (error) {
-            console.error("네트워크 오류로 1:1 채팅방을 시작할 수 없습니다:", error);
-            alert("네트워크 오류로 1:1 채팅방을 시작할 수 없습니다.");
-        }
+        setSelectedUser(user);
+        setShowChatTypeModal(true);
     };
 
+    //메시지 렌더링 부분
+    const renderMessage = useCallback((message) => (
+        <div key={message.id} className={`message ${message.isOwn ? 'own' : 'other'}`}>
+            <div className="message-content">
+                {!message.isOwn && (
+                    <img src={message.avatar} alt="avatar" className="message-avatar" />
+                )}
+                <div className="message-body">
+                    {!message.isOwn && (
+                        <div className="message-sender">{message.sender}</div>
+                    )}
+                    <div className={`message-bubble ${message.isOwn ? 'own-bubble' : 'other-bubble'}`}>
+                        <p className="message-text">{message.content}</p>
+                    </div>
+                    <div className="message-footer">
+                        <div className="message-time">{message.time}</div>
+                        {message.isOwn && (
+                            <div className={`read-status ${message.isRead ? 'read' : 'unread'}`}>
+                                {message.isRead ? '읽음' : '1'}
+                            </div>
+                        )}
+                    </div>
+                </div>
+                {message.isOwn && (
+                    <img src={currentUser?.avatar} alt="avatar" className="message-avatar" />
+                )}
+            </div>
+        </div>
+    ), [currentUser]);
+
+// 메시지 목록 렌더링
+    const getCurrentMessages = useCallback(() => messages[currentChatRoom] || [], [messages, currentChatRoom]);
 
     return (
+        <>
+            {showChatTypeModal && <ChatTypeModal />}
+            <ContextMenu/>
+            <DeleteConfirmModal/>
+
         <div className="chat-container">
             {/* 왼쪽 사이드바 - 채팅방 목록 */}
             <div className="left-sidebar">
@@ -666,39 +1063,7 @@ const Chat = () => {
                     )}
 
                     {/* 채팅방 목록이 있을 때만 맵핑하여 렌더링 */}
-                    {!chatRoomsLoading && !chatRoomsError && chatRooms.length > 0 && chatRooms.map((room) => (
-                        <div
-                            key={room.id}
-                            onClick={() => handleRoomChange(room.id)}
-                            className={`room-item ${currentChatRoom === room.id ? 'active' : ''}`}
-                        >
-                            <div className="room-content">
-                                <div className="room-avatar" style={{backgroundColor: room.color}}>
-                                    <Hash className="room-icon"/>
-                                </div>
-                                <div className="room-info">
-                                    <div className="room-header">
-                                        <h3 className="room-name">{room.name}</h3>
-                                        {/* unreadCount 배지 표시 */}
-                                        {room.unreadCount > 0 && (
-                                            <span className="unread-badge">
-                                                    {room.unreadCount}
-                                                </span>
-                                        )}
-                                    </div>
-                                    <p className="room-description">{room.description}</p>
-                                    <p className="room-last-message">{room.lastMessage}</p>
-                                    <div className="room-footer">
-                                        <span className="last-message-time">{room.lastMessageTime}</span>
-                                        <div className="participants-count">
-                                            <Users className="participants-icon"/>
-                                            {room.participants}명
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
+                    {!chatRoomsLoading && !chatRoomsError && chatRooms.length > 0 && chatRooms.map(renderRoomItem)}
                 </div>
             </div>
 
@@ -712,7 +1077,7 @@ const Chat = () => {
                         </div>
                         <div className="current-room-info">
                             <h3 className="current-room-name">{getCurrentRoom()?.name}</h3>
-                            <p className="current-room-participants">{getCurrentParticipants()}명 참여 중</p>
+                            <p className="current-room-participants">{getCurrentParticipants()?? 0}명 참여 중</p>
                         </div>
                     </div>
 
@@ -738,35 +1103,17 @@ const Chat = () => {
                             <div className="empty-chat-avatar" style={{backgroundColor: getCurrentRoom()?.color}}>
                                 <Hash className="empty-chat-icon"/>
                             </div>
-                            <h3 className="empty-chat-title">{getCurrentRoom()?.name}</h3>
+                            <h3 className="empty-chat-title">{getCurrentRoom()?.name || '채팅방 없음'}</h3>
                             <p className="empty-chat-description">
                                 {getCurrentRoom()?.description}<br/>
                                 팀원들과 소통을 시작해보세요.
                             </p>
+                            {Array.isArray(getCurrentMessages()) && getCurrentMessages().map(renderMessage)}
                         </div>
                     ) : (
                         // 메시지 목록
                         <div className="messages-list">
-                            {getCurrentMessages().map((message) => (
-                                <div key={message.id} className={`message ${message.isOwn ? 'own' : 'other'}`}>
-                                    <div className="message-content">
-                                        <img
-                                            src={message.avatar}
-                                            alt={message.sender}
-                                            className="message-avatar"
-                                        />
-                                        <div className="message-body">
-                                            {!message.isOwn && (
-                                                <span className="message-sender">{message.sender}</span>
-                                            )}
-                                            <div className={`message-bubble ${message.isOwn ? 'own-bubble' : 'other-bubble'}`}>
-                                                <p className="message-text">{message.content}</p>
-                                            </div>
-                                            <span className="message-time">{message.time}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
+                            {(getCurrentMessages() || []).map(renderMessage)}
                         </div>
                     )}
                     <div ref={messagesEndRef}/>
@@ -859,6 +1206,7 @@ const Chat = () => {
                 </div>
             )}
         </div>
+        </>
     );
 };
 

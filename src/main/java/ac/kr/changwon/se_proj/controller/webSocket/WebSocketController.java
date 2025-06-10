@@ -1,12 +1,14 @@
 package ac.kr.changwon.se_proj.controller.webSocket;
 
 import ac.kr.changwon.se_proj.dto.ChatMessageDTO;
+import ac.kr.changwon.se_proj.dto.ChatReadStatusMessage;
 import ac.kr.changwon.se_proj.model.ChatMessage;
 import ac.kr.changwon.se_proj.model.ChatRoom;
 import ac.kr.changwon.se_proj.model.User;
 import ac.kr.changwon.se_proj.properties.ChatProperties;
 import ac.kr.changwon.se_proj.repository.ChatRoomRepository; // ChatRoomRepository 임포트 추가
 import ac.kr.changwon.se_proj.repository.UserRepository;
+import ac.kr.changwon.se_proj.service.Interface.ChatRoomService;
 import ac.kr.changwon.se_proj.service.impl.ChatMessageServiceImpl; // NEW
 import ac.kr.changwon.se_proj.service.impl.ChatRoomServiceImpl; // 추가
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,7 @@ public class WebSocketController {
     private final ChatProperties chatProps;
     private final ChatRoomRepository chatRoomRepository; // NEW
     private final ChatMessageServiceImpl chatMessageService; // NEW
+    private final ChatRoomService chatRoomService;
 
     /**
      * WebSocket 메시지 수신 처리
@@ -98,6 +101,22 @@ public class WebSocketController {
             log.info("Message sent to destination: {}, Payload Content: {}", destination, message.getContent());
         } catch (Exception e) {
             log.error("Error sending message via messagingTemplate to {}. Error: {}", destination, e.getMessage(), e);
+        }
+    }
+
+    // 읽음 상태 처리 핸들러 추가
+    @MessageMapping("/chat.markAsRead/{roomId}")
+    public void handleMarkAsRead(@DestinationVariable String roomId, ChatReadStatusMessage readStatus) {
+        try {
+            // 1. 백엔드에서 읽음 처리 수행
+            chatRoomService.markMessagesAsRead(roomId, readStatus.getUserId());
+
+            // 2. 읽음 상태를 해당 채팅방 구독자들에게 브로드캐스트
+            messagingTemplate.convertAndSend("/topic/readStatus/" + roomId, readStatus);
+
+            log.info("사용자 {}가 채팅방 {}에서 읽음 처리 완료", readStatus.getUserId(), roomId);
+        } catch (Exception e) {
+            log.error("읽음 상태 처리 중 오류 발생: {}", e.getMessage());
         }
     }
 }
