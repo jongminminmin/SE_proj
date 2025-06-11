@@ -236,6 +236,7 @@ public class ChatRoomController {
                         participantInfo.put("email", user.getEmail());
                         participantInfo.put("avatar", "https://via.placeholder.com/32/CCCCCC/FFFFFF/?text=" +
                                 user.getUsername().charAt(0));
+
                         return participantInfo;
                     })
                     .collect(Collectors.toList());
