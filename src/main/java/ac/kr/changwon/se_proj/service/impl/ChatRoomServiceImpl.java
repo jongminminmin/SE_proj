@@ -1,5 +1,6 @@
 package ac.kr.changwon.se_proj.service.impl;
 
+import ac.kr.changwon.se_proj.dto.ChatRoomCreationRequest;
 import ac.kr.changwon.se_proj.model.ChatMessage;
 import ac.kr.changwon.se_proj.model.ChatRoom;
 import ac.kr.changwon.se_proj.model.User;
@@ -101,8 +102,59 @@ public class ChatRoomServiceImpl implements ChatRoomService { // <-- 이 부분�
         ChatMessage lastMessage = chatRoom.getMessages() != null && !chatRoom.getMessages().isEmpty() ?
                 chatRoom.getMessages().get(chatRoom.getMessages().size() - 1) : null;
 
-        userChatRoom.setUnreadCount(0);
-        userChatRoom.setLastReadMessage(lastMessage);
+        userChatRoom.setUnreadCount(0);  // unreadCount를 0으로 초기화
+        userChatRoom.setLastReadMessage(lastMessage);  // 마지막 읽은 메시지 설정
         userChatRoomRepository.save(userChatRoom);
+    }
+
+    @Override
+    @Transactional
+    public ChatRoom createGroupChatRoom(ChatRoomCreationRequest request, User creator) {
+        ChatRoom newRoom = ChatRoom.builder()
+                .type("GROUP")
+                .name(request.getName())
+                .description(request.getDescription())
+                .color("#28a745") // 그룹은 다른 색상
+                .lastMessage("")
+                .lastMessageTime(LocalDateTime.now())
+                .userChatRooms(new HashSet<>())
+                .build();
+
+        // intId 설정 (그룹은 PRIVATE_ROOM_MAX_ID_FROM_SERVER보다 큰 값)
+        Optional<ChatRoom> maxIntIdRoom = chatRoomRepository.findTopByOrderByIntIdDesc();
+        int newIntId = maxIntIdRoom.map(room -> Math.max(room.getIntId() + 1, 11))
+                .orElse(11);
+        newRoom.setIntId(newIntId);
+
+        // 채팅방 저장
+        newRoom = chatRoomRepository.save(newRoom);
+
+        // 생성자를 참여자로 추가
+        UserChatRoom creatorUcr = UserChatRoom.builder()
+                .user(creator)
+                .chatRoom(newRoom)
+                .unreadCount(0)
+                .build();
+        userChatRoomRepository.save(creatorUcr);
+        newRoom.getUserChatRooms().add(creatorUcr);
+
+        // 추가 참여자들도 추가 (request.getParticipants()가 있다면)
+        if (request.getParticipants() != null) {
+            for (String participantId : request.getParticipants()) {
+                if (!participantId.equals(creator.getId())) {
+                    User participant = userRepository.findById(participantId)
+                            .orElseThrow(() -> new RuntimeException("Participant not found: " + participantId));
+                    UserChatRoom participantUcr = UserChatRoom.builder()
+                            .user(participant)
+                            .chatRoom(newRoom)
+                            .unreadCount(0)
+                            .build();
+                    userChatRoomRepository.save(participantUcr);
+                    newRoom.getUserChatRooms().add(participantUcr);
+                }
+            }
+        }
+
+        return newRoom;
     }
 }
