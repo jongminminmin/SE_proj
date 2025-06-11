@@ -494,4 +494,8 @@
 .btnSecondary:hover {
   background: #e5e7eb;
   color: #007aff;
+}
+
+.kanban-hover .kanban-add-btn {
+  display: inline-block !important;
 } 

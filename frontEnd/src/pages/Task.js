@@ -300,27 +300,6 @@ const Task = () => {
                 {columnTitles[col]}
                 {col === 'done' && <span style={{ color: '#6bb700', fontSize: 18, marginLeft: 2 }}>✔</span>}
                 <span style={{ color: '#888', fontWeight: 400, fontSize: 14, marginLeft: 6 }}>{getColumnTasks(col).length > 0 ? getColumnTasks(col).length : ''}</span>
-                {/* + 만들기 버튼 (hover 시만 보임) */}
-                <button
-                  style={{
-                    display: 'none',
-                    position: 'absolute',
-                    right: 0,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: '#2563eb',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 6,
-                    padding: '4px 12px',
-                    fontWeight: 500,
-                    fontSize: 15,
-                    cursor: 'pointer',
-                    zIndex: 2
-                  }}
-                  className="kanban-add-btn"
-                  onClick={() => { setSelectedColumn(col); setTaskForm({ ...taskForm, status: col }); setNewTaskModal(true); }}
-                >+ 만들기</button>
               </div>
               {/* 카드 리스트 */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -344,6 +323,31 @@ const Task = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+              {/* 하단 중앙 +만들기 문구 */}
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16, marginBottom: 4 }}>
+                <span
+                  className={styles.kanbanAddText}
+                  onClick={() => {
+                    setSelectedColumn(col);
+                    setTaskForm({ ...taskForm, status: col });
+                    setNewTaskModal(true);
+                  }}
+                  style={{
+                    color: '#2563eb',
+                    fontWeight: 500,
+                    fontSize: 16,
+                    cursor: 'pointer',
+                    padding: '6px 18px',
+                    borderRadius: 6,
+                    background: 'transparent',
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseOver={e => e.currentTarget.style.background = '#f0f4ff'}
+                  onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <span style={{ fontSize: 20, marginRight: 4, fontWeight: 700 }}>+</span>만들기
+                </span>
               </div>
             </div>
           ))}

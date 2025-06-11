@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom'; // useLocation은 현재 사용되지 않으므로 제거 가능
 import './Login.css';
+// import googleLogo from '../assets/google_logo.png'; // 구글 로고 이미지 import 제거
+const googleLogo = 'https://developers.google.com/identity/images/g-logo.png';
 
 function Login() {
     const navigate = useNavigate();
@@ -106,40 +108,26 @@ function Login() {
 
     const handleLogin = async (e) => {
         e.preventDefault();
-        setLoginError(false); // 이전 로그인 오류 메시지 초기화
+        setLoginError(false);
         try {
-            const response = await fetch('/api/auth/login', { // 로그인 API 경로
+            const response = await fetch('/api/auth/login', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    userId: userId,
-                    password: password
-                }),
-                credentials: 'include' // 쿠키/세션 정보 포함
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, password }),
+                credentials: 'include'
             });
 
             if (!response.ok) {
-                let errorData;
-                try {
-                    errorData = await response.json();
-                } catch (jsonError) {
-                    const errorText = await response.text();
-                    throw new Error(errorText || `로그인 실패 (상태 코드: ${response.status})`);
-                }
-                throw new Error(errorData.message || '로그인에 실패했습니다.');
+                setLoginError(true);
+                return;
             }
-
             const data = await response.json();
             if (data.token) {
                 localStorage.setItem('token', data.token);
             }
             navigate('/main');
-
         } catch (error) {
             setLoginError(true);
-            console.error('로그인 오류:', error.message);
         }
     };
 
@@ -147,69 +135,64 @@ function Login() {
         navigate('/register');
     };
 
-    // 아이디/비밀번호 찾기 페이지로 이동하는 함수 추가
     const goToFindAccount = () => {
         navigate('/find-account');
     };
 
+    // 구글 소셜 로그인 핸들러
+    const handleGoogleLogin = () => {
+        window.location.href = '/oauth2/authorization/google';
+    };
+
     return (
-        <div className="login-container">
-            <form className="login-form" onSubmit={handleLogin}>
-                <h2 className="login-title">로그인</h2>
-
-                {loginError && ( // 로그인 오류 메시지만 표시
-                    <div className="error-message">
-                        아이디 또는 비밀번호가 올바르지 않습니다.
-                    </div>
-                )}
-
-                {/* 아이디 찾기 결과/오류 메시지 표시는 현재 로그인 UI에 포함되지 않음 */}
-                {/* {findIdError && <p className="error-message">{findIdError}</p>} */}
-                {/* {findIdResult && <p className="success-message">{findIdResult}</p>} */}
-
-                {/* 비밀번호 찾기 결과/오류 메시지 표시는 현재 로그인 UI에 포함되지 않음 */}
-                {/* {findPasswordError && <p className="error-message">{findPasswordError}</p>} */}
-                {/* {findPasswordResult && <p className="success-message">{findPasswordResult}</p>} */}
-
-                <input
-                    type="text"
-                    name="userId"
-                    placeholder="아이디"
-                    value={userId}
-                    onChange={e => setUserId(e.target.value)}
-                    className="login-input"
-                    required
-                />
-                <input
-                    type="password"
-                    placeholder="비밀번호"
-                    name="password"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    className="login-input"
-                    required
-                />
-                <button type="submit" className="login-btn">로그인</button>
-                <div className="find-links">
-                    <span onClick={goToFindAccount}>아이디/비밀번호 찾기</span>
-                </div>
-                <div className="register-link">
-                    계정이 없으신가요?{' '}
-                    <span onClick={goToRegister}>회원가입</span>
-                </div>
-                {/* 아이디/비밀번호 찾기 링크 또는 버튼을 여기에 추가하고,
-                    클릭 시 해당 UI(모달 등)를 보여주고,
-                    그 UI의 폼에서 handleFindIdSubmit 또는 handleFindPasswordSubmit 함수를 호출하도록 구현해야 합니다.
-                    예:
+        <div className="login-wrapper">
+            <div className="mate-logo">MATE</div>
+            <div className="login-left">
+                <h1 className="main-title">함께 만드는 프로젝트,<br />당신의 완벽한 파트너.</h1>
+                <p className="main-desc">Mate와 함께라면 협업이 더 쉬워집니다.<br />지금 바로 시작해보세요!</p>
+            </div>
+            <div className="login-right">
+                <form className="login-form" onSubmit={handleLogin}>
+                    {loginError && (
+                        <div className="error-message">
+                            아이디 또는 비밀번호가 올바르지 않습니다.
+                        </div>
+                    )}
+                    <input
+                        type="text"
+                        name="userId"
+                        placeholder="아이디"
+                        value={userId}
+                        onChange={e => setUserId(e.target.value)}
+                        className="login-input"
+                        required
+                    />
+                    <input
+                        type="password"
+                        placeholder="비밀번호"
+                        name="password"
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        className="login-input"
+                        required
+                    />
+                    <button type="submit" className="login-btn">로그인</button>
+                    <button type="button" className="google-login-btn" onClick={handleGoogleLogin}>
+                        <img src={googleLogo} alt="Google Logo" className="google-logo" />
+                        Google로 로그인
+                    </button>
                     <div className="find-links">
-                        <span onClick={보여줄_아이디찾기_UI_함수}>아이디 찾기</span>
-                        {' / '}
-                        <span onClick={보여줄_비밀번호찾기_UI_함수}>비밀번호 찾기</span>
+                        <span onClick={goToFindAccount} className="link-text">아이디/비밀번호 찾기</span>
                     </div>
-                */}
-            </form>
+                    <div className="register-link">
+                        계정이 없으신가요?{' '}
+                        <span onClick={goToRegister} className="link-text">회원가입</span>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 }
 
 export default Login;
+

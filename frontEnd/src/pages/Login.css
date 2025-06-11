@@ -1,35 +1,77 @@
-.login-container {
-  min-height: 100vh;
+.login-wrapper {
   display: flex;
-  align-items: center;
+  min-height: 100vh;
+  background: #f5f6fa;
+  position: relative;
+}
+
+.mate-logo {
+  position: absolute;
+  top: 32px;
+  left: 48px;
+  font-size: 2.1rem;
+  font-weight: 900;
+  color: #2563eb;
+  letter-spacing: 2px;
+  z-index: 10;
+  font-family: 'Montserrat', 'Pretendard', 'Noto Sans KR', sans-serif;
+}
+
+.login-left, .login-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   justify-content: center;
+  align-items: center;
   background: #f5f6fa;
 }
 
+.login-right {
+  padding-left: 40px;
+}
+
+.main-title {
+  font-size: 2.2rem;
+  font-weight: bold;
+  color: #222;
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.main-desc {
+  font-size: 1.1rem;
+  color: #555;
+  text-align: center;
+  margin-bottom: 32px;
+}
+
 .login-form {
-  background: #fff;
-  padding: 2.5rem 2.5rem 2rem 2.5rem;
-  border-radius: 16px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  width: 340px;
+  background: none;
+  box-shadow: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
   display: flex;
   flex-direction: column;
-  min-width: 340px;
+  align-items: stretch;
 }
 
 .login-title {
-  font-size: 2rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 24px;
   color: #222;
-  margin-bottom: 2rem;
   text-align: center;
 }
 
 .login-input {
+  margin-bottom: 16px;
+  padding: 12px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
   font-size: 1rem;
-  padding: 0.9rem 1.1rem;
-  margin-bottom: 1.2rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
   outline: none;
   transition: border 0.2s;
 }
@@ -41,13 +83,13 @@
 .login-btn {
   background: #4f8cff;
   color: #fff;
-  font-size: 1.1rem;
-  font-weight: 600;
   border: none;
-  border-radius: 8px;
-  padding: 0.9rem 0;
-  margin-bottom: 1.2rem;
+  border-radius: 6px;
+  padding: 12px 0;
+  font-size: 1.1rem;
+  font-weight: bold;
   cursor: pointer;
+  margin-bottom: 18px;
   transition: background 0.2s;
 }
 
@@ -55,43 +97,74 @@
   background: #2563eb;
 }
 
+.google-login-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  background: #fff;
+  color: #444;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 10px 0;
+  font-size: 1.05rem;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 16px;
+  transition: background 0.2s, border 0.2s;
+  gap: 10px;
+}
+.google-login-btn:hover {
+  background: #f7f7f7;
+  border: 1.5px solid #bbb;
+}
+.google-logo {
+  width: 22px;
+  height: 22px;
+  margin-right: 6px;
+  background: none;
+}
+
 .find-links {
   text-align: center;
-  margin: 20px 0 8px 0;
-  color: #888;
-  font-size: 0.98rem;
-  line-height: 1.5;
+  margin-bottom: 10px;
 }
 
-.find-links span {
-  color: #007bff;
+.link-text {
+  color: #4f8cff;
   cursor: pointer;
-  text-decoration: none;
-  padding: 0 5px;
-  transition: all 0.3s ease;
+  text-decoration: underline;
+  font-size: 0.98rem;
 }
 
-.find-links span:hover {
-  color: #0056b3;
-  text-decoration: underline;
+.link-text:hover {
+  color: #2563eb;
 }
 
 .register-link {
   text-align: center;
-  color: #888;
   font-size: 0.98rem;
-  margin-top: 8px;
+  color: #555;
 }
 
-.register-link span {
-  color: #4f8cff;
-  cursor: pointer;
-  font-weight: 500;
-  margin-left: 0.2rem;
-  transition: text-decoration 0.2s;
+.error-message {
+  color: #e74c3c;
+  background: #fff0f0;
+  border: 1px solid #ffd6d6;
+  border-radius: 5px;
+  padding: 8px 0;
+  margin-bottom: 14px;
+  text-align: center;
+  font-size: 0.98rem;
 }
 
-.register-link span:hover {
-  text-decoration: underline;
-} 
-
+.success-message {
+  color: #2ecc71;
+  background: #f0fff4;
+  border: 1px solid #b2f2d7;
+  border-radius: 5px;
+  padding: 8px 0;
+  margin-bottom: 14px;
+  text-align: center;
+  font-size: 0.98rem;
+}
