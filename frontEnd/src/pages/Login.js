@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // useLocation은 현재 사용되지 않으므로 제거 가능
+import { useNavigate } from 'react-router-dom';
 import './Login.css';
-// import googleLogo from '../assets/google_logo.png'; // 구글 로고 이미지 import 제거
 const googleLogo = 'https://developers.google.com/identity/images/g-logo.png';
 
 function Login() {
@@ -11,99 +10,23 @@ function Login() {
     const [password, setPassword] = useState('');
     const [loginError, setLoginError] = useState(false); // 로그인 오류 상태명 변경 (error -> loginError)
 
-    // --- 아이디 찾기 로직 추가 시작 ---
-    const [findIdEmail, setFindIdEmail] = useState(''); // 아이디 찾기 시 입력할 이메일 상태
-    const [findIdResult, setFindIdResult] = useState(''); // 아이디 찾기 결과 메시지 또는 찾은 아이디
-    const [findIdError, setFindIdError] = useState('');   // 아이디 찾기 오류 메시지
-
-    // 아이디 찾기 입력 변경 핸들러 (이 UI는 현재 Login.js에 없습니다)
-    const handleFindIdEmailChange = (e) => {
-        setFindIdEmail(e.target.value);
-    };
-
-    // 아이디 찾기 제출 핸들러 (API 호출 로직)
-    // 이 함수는 별도의 아이디 찾기 UI에서 호출되어야 합니다.
-    const handleFindIdSubmit = async (event) => {
-        event.preventDefault();
-        setFindIdResult('');
-        setFindIdError('');
-
-        if (!findIdEmail) {
-            setFindIdError('이메일을 입력해주세요.');
-            return;
-        }
-
-        try {
-            const response = await fetch('/api/auth/find/id', { // 서버의 아이디 찾기 API 엔드포인트
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email: findIdEmail }),
-            });
-
-            const data = await response.json();
-            if (response.ok && data.success) {
-                setFindIdResult(`찾으시는 아이디는 [${data.userId}] 입니다.`); // 실제 운영 시 아이디 전체 노출 주의
-            } else {
-                setFindIdError(data.message || '해당 이메일로 가입된 아이디를 찾을 수 없습니다.');
-                console.error('Find ID failed:', data.message);
-            }
-        } catch (err) {
-            setFindIdError('네트워크 오류 또는 서버에 연결할 수 없습니다.');
-            console.error('Network error or server issue during find ID:', err);
-        }
-    };
+    // --- 아이디 찾기 로직 추가 시작 (현재 Login.js UI에는 없으므로 관련 상태 및 핸들러 제거) ---
+    // const [findIdEmail, setFindIdEmail] = useState('');
+    // const [findIdResult, setFindIdResult] = useState('');
+    // const [findIdError, setFindIdError] = useState('');
+    // const handleFindIdEmailChange = (e) => { setFindIdEmail(e.target.value); };
+    // const handleFindIdSubmit = async (event) => { /* ... */ };
     // --- 아이디 찾기 로직 추가 끝 ---
 
-    // --- 비밀번호 찾기(재설정 전 사용자 확인) 로직 추가 시작 ---
-    const [findPasswordForm, setFindPasswordForm] = useState({
-        userId: '',
-        email: '',
-    });
-    const [findPasswordResult, setFindPasswordResult] = useState('');
-    const [findPasswordError, setFindPasswordError] = useState('');
-
-    // 비밀번호 찾기 폼 입력 변경 핸들러 (이 UI는 현재 Login.js에 없습니다)
-    const handleFindPasswordChange = (e) => {
-        setFindPasswordForm({ ...findPasswordForm, [e.target.name]: e.target.value });
-    };
-
-    // 비밀번호 찾기 제출 핸들러 (API 호출 로직)
-    // 이 함수는 별도의 비밀번호 찾기 UI에서 호출되어야 합니다.
-    const handleFindPasswordSubmit = async (event) => {
-        event.preventDefault();
-        setFindPasswordResult('');
-        setFindPasswordError('');
-
-        if (!findPasswordForm.userId || !findPasswordForm.email) {
-            setFindPasswordError('아이디와 이메일을 모두 입력해주세요.');
-            return;
-        }
-
-        try {
-            const response = await fetch('/api/auth/find/password', { // 서버의 비밀번호 찾기 API 엔드포인트
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(findPasswordForm),
-            });
-
-            const data = await response.json();
-
-            if (response.ok && data.success) {
-                // 실제 비밀번호를 반환하지 않고, 재설정 절차 안내 메시지를 표시
-                setFindPasswordResult(data.message || '비밀번호 재설정 안내 메일을 발송했습니다. (실제 발송 기능은 구현 필요)');
-            } else {
-                setFindPasswordError(data.message || '입력하신 정보와 일치하는 사용자를 찾을 수 없습니다.');
-                console.error('Find Password failed:', data.message);
-            }
-        } catch (err) {
-            setFindPasswordError('네트워크 오류 또는 서버에 연결할 수 없습니다.');
-            console.error('Network error or server issue during find password:', err);
-        }
-    };
+    // --- 비밀번호 찾기(재설정 전 사용자 확인) 로직 추가 시작 (현재 Login.js UI에는 없으므로 관련 상태 및 핸들러 제거) ---
+    // const [findPasswordForm, setFindPasswordForm] = useState({
+    //     userId: '',
+    //     email: '',
+    // });
+    // const [findPasswordResult, setFindPasswordResult] = useState('');
+    // const [findPasswordError, setFindPasswordError] = useState('');
+    // const handleFindPasswordChange = (e) => { /* ... */ };
+    // const handleFindPasswordSubmit = async (event) => { /* ... */ };
     // --- 비밀번호 찾기 로직 추가 끝 ---
 
     const handleLogin = async (e) => {
@@ -195,4 +118,3 @@ function Login() {
 }
 
 export default Login;
-
