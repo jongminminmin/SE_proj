@@ -92,6 +92,8 @@ dependencies {
 
     testImplementation 'org.apache.httpcomponents.client5:httpclient5'
 
+    implementation 'com.h2database:h2:2.2.224'
+
 }
 
 tasks.named('test') {

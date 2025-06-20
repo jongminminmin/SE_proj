@@ -1,41 +1,127 @@
-import React, { createContext, useState, useContext, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { useAuth } from './App'; // AuthContext에서 currentUser를 가져오기 위함
+import { Client } from '@stomp/stompjs';
 
-// 알림 Context 생성
+// 1. 컨텍스트 생성
 const NotificationContext = createContext(null);
 
-// 알림 Context를 쉽게 사용할 수 있는 커스텀 훅
+// 2. 다른 컴포넌트에서 쉽게 사용할 수 있도록 커스텀 훅 생성
 export const useNotifications = () => useContext(NotificationContext);
 
-// 알림 Provider 컴포넌트
+// 3. Provider 컴포넌트 정의 (웹소켓 로직 포함)
 export const NotificationProvider = ({ children }) => {
-    // 최신 메시지 알림 상태 (null이거나 { roomId, sender, content, timestamp } 객체)
-    const [latestMessageNotification, setLatestMessageNotification] = useState(null);
-    // 전역 읽지 않은 메시지 개수
+    const { currentUser } = useAuth();
+    const [stompClient, setStompClient] = useState(null);
+    const [isConnected, setIsConnected] = useState(false);
+    const [notifications, setNotifications] = useState([]);
     const [globalUnreadCount, setGlobalUnreadCount] = useState(0);
+    const [latestMessageNotification, setLatestMessageNotification] = useState(null);
 
-    // 최신 알림을 지우는 함수
-    const clearLatestNotification = useCallback(() => {
+    const subscriptions = useRef({});
+
+    // 모든 채팅방의 안 읽은 메시지 수 합산
+    const calculateTotalUnreadCount = (rooms) => {
+        return rooms.reduce((total, room) => total + (room.unreadCount || 0), 0);
+    };
+
+    // 웹소켓 연결 로직
+    useEffect(() => {
+        if (currentUser && !stompClient) {
+            const client = new Client({
+                brokerURL: `ws://${window.location.hostname}:9000/ws`,
+                connectHeaders: { username: currentUser.username },
+                reconnectDelay: 10000,
+                heartbeatIncoming: 15000,
+                heartbeatOutgoing: 15000,
+                onConnect: () => {
+                    console.log('전역 웹소켓 연결 성공');
+                    setIsConnected(true);
+
+                    // 모든 채팅방에 대한 구독 처리
+                    fetch('/api/chats/my-rooms')
+                        .then(res => res.json())
+                        .then(rooms => {
+                            if (!rooms) return;
+                            setGlobalUnreadCount(calculateTotalUnreadCount(rooms));
+                            rooms.forEach(room => {
+                                const subscriptionPath = `/topic/${room.type === 'PRIVATE' ? 'private' : 'group'}/${room.intId}`;
+                                if (!subscriptions.current[room.id]) {
+                                    const sub = client.subscribe(subscriptionPath, (message) => {
+                                        const receivedMsg = JSON.parse(message.body);
+
+                                        // 자신이 보낸 메시지는 알림 처리 안함
+                                        if (receivedMsg.senderId === currentUser.id) return;
+
+                                        // 현재 URL이 /chat 이고 해당 채팅방을 보고 있는 경우는 제외
+                                        const isChatPageActive = window.location.pathname.includes('/chat') && new URLSearchParams(window.location.search).get('roomId') === receivedMsg.chatRoomId;
+
+                                        if(!isChatPageActive) {
+                                            setLatestMessageNotification({
+                                                roomId: receivedMsg.chatRoomId,
+                                                sender: receivedMsg.username,
+                                                content: receivedMsg.content
+                                            });
+                                            setGlobalUnreadCount(prev => prev + 1);
+                                        }
+                                    });
+                                    subscriptions.current[room.id] = sub;
+                                }
+                            });
+                        });
+                },
+                onDisconnect: () => {
+                    console.log('전역 웹소켓 연결 끊김');
+                    setIsConnected(false);
+                },
+                onStompError: (frame) => {
+                    console.error('전역 웹소켓 오류:', frame.headers['message'], frame.body);
+                    setIsConnected(false);
+                },
+            });
+
+            client.activate();
+            setStompClient(client);
+        } else if (!currentUser && stompClient) {
+            stompClient.deactivate();
+            setStompClient(null);
+            setIsConnected(false);
+            console.log('로그아웃으로 인한 전역 웹소켓 연결 해제');
+        }
+
+        return () => {
+            if (stompClient?.active) {
+                stompClient.deactivate();
+            }
+        };
+    }, [currentUser, stompClient]);
+
+    const clearLatestNotification = () => {
         setLatestMessageNotification(null);
-    }, []);
+    };
 
-    // 전역 읽지 않은 메시지 개수를 1 증가시키는 함수
-    const incrementGlobalUnreadCount = useCallback(() => {
-        setGlobalUnreadCount(prev => prev + 1);
-    }, []);
+    // 외부에서 안 읽은 메시지 수를 업데이트할 수 있는 함수
+    const updateGlobalUnreadCount = useCallback(async () => {
+        if (!currentUser) return;
+        try {
+            const response = await fetch('/api/chats/my-rooms');
+            if(response.ok) {
+                const rooms = await response.json();
+                setGlobalUnreadCount(calculateTotalUnreadCount(rooms));
+            }
+        } catch (error) {
+            console.error("안 읽은 메시지 개수 업데이트 실패:", error);
+        }
+    }, [currentUser]);
 
-    // 전역 읽지 않은 메시지 개수를 0으로 초기화하는 함수
-    const resetGlobalUnreadCount = useCallback(() => {
-        setGlobalUnreadCount(0);
-    }, []);
 
-    // Context를 통해 제공할 값들
     const value = {
-        latestMessageNotification,
-        setLatestMessageNotification, // useStompChat에서 호출될 수 있도록 노출
+        notifications,
         globalUnreadCount,
-        incrementGlobalUnreadCount, // Chat.js나 다른 곳에서 호출될 수 있도록 노출
-        resetGlobalUnreadCount,   // Chat.js에서 호출될 수 있도록 노출
+        latestMessageNotification,
         clearLatestNotification,
+        updateGlobalUnreadCount,
+        stompClient, // Chat.js에서 메시지 전송을 위해 클라이언트 직접 전달
+        isConnected
     };
 
     return (
