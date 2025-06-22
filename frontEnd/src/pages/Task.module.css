@@ -1,0 +1,170 @@
+.wrapper {
+  display: flex;
+  height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.sidebar {
+  background-color: #fff;
+  border-right: 1px solid #e9ecef;
+  padding: 24px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebarTitle {
+  font-size: 24px;
+  font-weight: bold;
+  color: #343a40;
+}
+
+.sidebarMenu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebarMenuItem {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  color: #495057;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.sidebarMenuItem:hover {
+  background-color: #f1f3f5;
+}
+
+.mainContent {
+  flex: 1;
+  padding: 24px 32px;
+  overflow-y: auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.titleBox {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.inviteBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #e9ecef;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.logoutBtn {
+  background-color: #0d6efd;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.kanbanColumn {
+  flex: 1;
+  background: #fafbfc;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.kanbanHeader {
+  font-weight: 600;
+  font-size: 17px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.taskCount {
+  color: #888;
+  font-weight: 400;
+  font-size: 14px;
+  margin-left: 8px;
+}
+
+.addTask {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  margin: 0 8px 8px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #555;
+  border-radius: 4px;
+  width: calc(100% - 16px);
+  text-align: left;
+}
+
+.addTask:hover {
+  background-color: #f0f0f0;
+}
+
+.addTask span {
+  font-weight: 500;
+}
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 4px;
+}
+
+.taskCard {
+  background: #fff;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  cursor: pointer;
+}
+
+.taskTitle {
+  font-weight: 500;
+  margin: 0 0 12px 0;
+}
+
+.taskFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.taskDueDate {
+  font-size: 13px;
+  color: #6c757d;
+}

@@ -21,7 +21,7 @@ public class ProjectAdminController {
     }
 
     @GetMapping("/{projectId}/isAdmin")
-    public ResponseEntity<Map<String, Object>> isAdmin(@PathVariable int projectId,
+        public ResponseEntity<Map<String, Object>> isAdmin(@PathVariable Long projectId,
                                                        @RequestParam(required = false) String projectMemberTier) {
         Map<String, Object> response = new HashMap<>();
 

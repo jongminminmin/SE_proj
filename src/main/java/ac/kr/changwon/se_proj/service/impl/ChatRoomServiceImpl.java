@@ -1,34 +1,32 @@
 package ac.kr.changwon.se_proj.service.impl;
 
 import ac.kr.changwon.se_proj.dto.ChatRoomCreationRequest;
-import ac.kr.changwon.se_proj.model.ChatMessage;
+import ac.kr.changwon.se_proj.dto.ChatRoomDTO;
 import ac.kr.changwon.se_proj.model.ChatRoom;
 import ac.kr.changwon.se_proj.model.User;
 import ac.kr.changwon.se_proj.model.UserChatRoom;
 import ac.kr.changwon.se_proj.repository.ChatRoomRepository;
 import ac.kr.changwon.se_proj.repository.UserChatRoomRepository;
 import ac.kr.changwon.se_proj.repository.UserRepository;
-import ac.kr.changwon.se_proj.service.Interface.ChatRoomService; // 인터페이스 임포트
+import ac.kr.changwon.se_proj.service.Interface.ChatRoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class ChatRoomServiceImpl implements ChatRoomService { // <-- 이 부분이 핵심 수정!
+public class ChatRoomServiceImpl implements ChatRoomService {
 
     private final ChatRoomRepository chatRoomRepository;
     private final UserRepository userRepository;
-    private final UserChatRoomRepository userChatRoomRepository; // NEW
+    private final UserChatRoomRepository userChatRoomRepository;
 
-    // 현재 참여 중인 채팅방 목록 가져오기 (사용자별 unreadCount 포함)
-    @Override // 인터페이스 메서드임을 명시
     @Transactional(readOnly = true)
     public List<ChatRoom> getChatRoomsByUserId(String userId) {
         User user = userRepository.findById(userId)
@@ -38,58 +36,32 @@ public class ChatRoomServiceImpl implements ChatRoomService { // <-- 이 부분�
                 .collect(Collectors.toList());
     }
 
-    // 1:1 채팅방을 찾아 반환하거나 새로 생성하는 메서드
-    @Override // 인터페이스 메서드임을 명시
-    @Transactional
-    public ChatRoom createOrGetPrivateChatRoom(User user1, User user2) {
-        Optional<ChatRoom> existingRoom = chatRoomRepository.findPrivateChatRoomByParticipants(user1, user2);
-
-        if (existingRoom.isPresent()) {
-            return existingRoom.get();
-        } else {
-            ChatRoom newRoom = ChatRoom.builder()
-                    .type("PRIVATE")
-                    .name(user2.getUsername()) // 1:1 방은 상대방 이름으로
-                    .description("1:1 대화")
-                    .color("#6c757d")
-                    .lastMessage("")
-                    .lastMessageTime(LocalDateTime.now())
-                    .userChatRooms(new HashSet<>()) // <-- 이 부분이 핵심 수정: HashSet으로 초기화
-                    .build();
-            // ChatRoom의 intId를 설정 (가장 큰 intId + 1)
-            Optional<ChatRoom> maxIntIdRoom = chatRoomRepository.findTopByOrderByIntIdDesc();
-            newRoom.setIntId(maxIntIdRoom.map(room -> room.getIntId() + 1).orElse(1));
-
-            // ChatRoom 저장
-            newRoom = chatRoomRepository.save(newRoom);
-
-            // UserChatRoom 엔티티 생성 및 저장 (각 사용자별 참여 정보)
-            UserChatRoom ucr1 = UserChatRoom.builder()
-                    .user(user1)
-                    .chatRoom(newRoom)
-                    .unreadCount(0) // 새 방이므로 0
-                    .build();
-            UserChatRoom ucr2 = UserChatRoom.builder()
-                    .user(user2)
-                    .chatRoom(newRoom)
-                    .unreadCount(0) // 새 방이므로 0
-                    .build();
-
-            userChatRoomRepository.save(ucr1);
-            userChatRoomRepository.save(ucr2);
-
-            // ChatRoom의 userChatRooms 컬렉션에도 추가 (양방향 관계 유지)
-            // 이제 newRoom.getUserChatRooms()는 null이 아니므로 add() 호출 가능
-            newRoom.getUserChatRooms().add(ucr1);
-            newRoom.getUserChatRooms().add(ucr2);
-
-            return newRoom;
-        }
+    @Override
+    @Transactional(readOnly = true)
+    public List<ChatRoomDTO> findUserChatRooms(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+        List<UserChatRoom> userChatRooms = userChatRoomRepository.findByUser(user);
+        return userChatRooms.stream()
+                .map(userChatRoom -> {
+                    ChatRoom room = userChatRoom.getChatRoom();
+                    return new ChatRoomDTO(
+                            room.getId(),
+                            room.getIntId(),
+                            room.getName(),
+                            room.getDescription(),
+                            room.getLastMessage(),
+                            room.getLastMessageTime() != null ? room.getLastMessageTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) : "",
+                            (long) room.getUserChatRooms().size(),
+                            userChatRoom.getUnreadCount(),
+                            room.getColor()
+                    );
+                })
+                .collect(Collectors.toList());
     }
 
-    // 특정 방의 메시지를 읽음 처리 (unreadCount 0으로 초기화 및 lastReadMessageId 업데이트)
-    @Transactional
     @Override
+    @Transactional
     public void markMessagesAsRead(String chatRoomId, String userId) {
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new RuntimeException("ChatRoom not found with ID: " + chatRoomId));
@@ -99,62 +71,52 @@ public class ChatRoomServiceImpl implements ChatRoomService { // <-- 이 부분�
         UserChatRoom userChatRoom = userChatRoomRepository.findByUserAndChatRoom(user, chatRoom)
                 .orElseThrow(() -> new RuntimeException("User is not a participant in this chat room."));
 
-        ChatMessage lastMessage = chatRoom.getMessages() != null && !chatRoom.getMessages().isEmpty() ?
-                chatRoom.getMessages().get(chatRoom.getMessages().size() - 1) : null;
-
-        userChatRoom.setUnreadCount(0);  // unreadCount를 0으로 초기화
-        userChatRoom.setLastReadMessage(lastMessage);  // 마지막 읽은 메시지 설정
+        userChatRoom.setUnreadCount(0);
         userChatRoomRepository.save(userChatRoom);
     }
 
     @Override
     @Transactional
+    public ChatRoom createOrGetPrivateChatRoom(User user1, User user2) {
+        String roomId = "private_" + (user1.getId().compareTo(user2.getId()) < 0 ? user1.getId() + "_" + user2.getId() : user2.getId() + "_" + user1.getId());
+        return chatRoomRepository.findById(roomId).orElseGet(() -> {
+            ChatRoom newRoom = new ChatRoom();
+            newRoom.setId(roomId);
+            newRoom.setName(user2.getUsername());
+            newRoom.setDescription(user1.getUsername() + " and " + user2.getUsername() + "'s private chat");
+            newRoom.setLastMessageTime(LocalDateTime.now());
+            chatRoomRepository.save(newRoom);
+
+            UserChatRoom ucr1 = new UserChatRoom(user1, newRoom);
+            UserChatRoom ucr2 = new UserChatRoom(user2, newRoom);
+            userChatRoomRepository.saveAll(Arrays.asList(ucr1, ucr2));
+
+            return newRoom;
+        });
+    }
+
+    @Override
+    @Transactional
     public ChatRoom createGroupChatRoom(ChatRoomCreationRequest request, User creator) {
-        ChatRoom newRoom = ChatRoom.builder()
-                .type("GROUP")
-                .name(request.getName())
-                .description(request.getDescription())
-                .color("#28a745") // 그룹은 다른 색상
-                .lastMessage("")
-                .lastMessageTime(LocalDateTime.now())
-                .userChatRooms(new HashSet<>())
-                .build();
+        ChatRoom newRoom = new ChatRoom();
+        newRoom.setName(request.getName());
+        newRoom.setDescription(request.getDescription());
+        newRoom.setLastMessageTime(LocalDateTime.now());
+        chatRoomRepository.save(newRoom);
 
-        // intId 설정 (그룹은 PRIVATE_ROOM_MAX_ID_FROM_SERVER보다 큰 값)
-        Optional<ChatRoom> maxIntIdRoom = chatRoomRepository.findTopByOrderByIntIdDesc();
-        int newIntId = maxIntIdRoom.map(room -> Math.max(room.getIntId() + 1, 11))
-                .orElse(11);
-        newRoom.setIntId(newIntId);
-
-        // 채팅방 저장
-        newRoom = chatRoomRepository.save(newRoom);
-
-        // 생성자를 참여자로 추가
-        UserChatRoom creatorUcr = UserChatRoom.builder()
-                .user(creator)
-                .chatRoom(newRoom)
-                .unreadCount(0)
-                .build();
+        UserChatRoom creatorUcr = new UserChatRoom(creator, newRoom);
         userChatRoomRepository.save(creatorUcr);
-        newRoom.getUserChatRooms().add(creatorUcr);
 
-        // 추가 참여자들도 추가 (request.getParticipants()가 있다면)
         if (request.getParticipants() != null) {
             for (String participantId : request.getParticipants()) {
-                if (!participantId.equals(creator.getId())) {
-                    User participant = userRepository.findById(participantId)
-                            .orElseThrow(() -> new RuntimeException("Participant not found: " + participantId));
-                    UserChatRoom participantUcr = UserChatRoom.builder()
-                            .user(participant)
-                            .chatRoom(newRoom)
-                            .unreadCount(0)
-                            .build();
+                User participant = userRepository.findById(participantId)
+                        .orElseThrow(() -> new RuntimeException("Participant not found with ID: " + participantId));
+                if (!participant.equals(creator)) {
+                    UserChatRoom participantUcr = new UserChatRoom(participant, newRoom);
                     userChatRoomRepository.save(participantUcr);
-                    newRoom.getUserChatRooms().add(participantUcr);
                 }
             }
         }
-
         return newRoom;
     }
 }

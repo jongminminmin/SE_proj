@@ -6,7 +6,7 @@ import java.util.Set;
 
 @Data
 public class ProjectDTO {
-    private int projectId;
+    private Long projectId;
     private String projectTitle;
     private String description;
     private UserDto owner;

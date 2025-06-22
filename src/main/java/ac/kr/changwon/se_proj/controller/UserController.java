@@ -66,8 +66,7 @@ public class UserController {
         }
 
         logger.info("성공적으로 사용자 정보를 조회했습니다: {}", u.getUsername());
-        UserDto dto = new UserDto(u.getId(), u.getUsername(), u.getEmail());
-        return ResponseEntity.ok(dto);
+        return ResponseEntity.ok(UserDto.fromEntity(u));
     }
 
     //전체 사용자 목록 반환
@@ -76,7 +75,7 @@ public class UserController {
         logger.info("/api/users (전체 목록) 호출됨");
         List<UserDto> users = userService.findAll()
                 .stream()
-                .map(u -> new UserDto(u.getId(), u.getUsername(), null)) // 이메일은 목록에서 제외 (개인정보)
+                .map(UserDto::fromEntity)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(users);
     }
@@ -91,7 +90,7 @@ public class UserController {
             logger.warn("{} ID의 사용자를 찾을 수 없습니다.", id);
             return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.ok(new UserDto(u.getId(), u.getUsername(), u.getEmail()));
+        return ResponseEntity.ok(UserDto.fromEntity(u));
     }
 
 
@@ -99,12 +98,18 @@ public class UserController {
     @PostMapping
     public ResponseEntity<UserDto> createUser(@RequestBody UserDto dto) {
         logger.info("/api/users (생성) 호출됨. 요청 DTO: {}", dto);
-        // 비밀번호 암호화는 서비스 계층에서 처리되어야 합니다.
-        User savedUser = userService.saveUser(dto.toEntity());
+        // UserDto에 toEntity가 없으므로 직접 변환
+        User userToSave = User.builder()
+                .id(dto.getId())
+                .username(dto.getUsername())
+                .password(dto.getPassword()) // 비밀번호 암호화는 서비스에서
+                .email(dto.getEmail())
+                .build();
+        User savedUser = userService.saveUser(userToSave);
         logger.info("사용자 생성 완료: {}", savedUser.getUsername());
         return ResponseEntity
                 .created(URI.create("/api/users/" + savedUser.getId()))
-                .body(new UserDto(savedUser.getId(), savedUser.getUsername(), savedUser.getEmail()));
+                .body(UserDto.fromEntity(savedUser));
     }
 
     //사용자 수정
@@ -113,11 +118,16 @@ public class UserController {
                                               @RequestBody UserDto dto) {
         logger.info("/api/users/{} (수정) 호출됨. 요청 DTO: {}", id, dto);
         dto.setId(id); // 경로 변수 ID를 DTO에 설정
-        User updatedUser = userService.updateUser(dto.toEntity());
+        // UserDto에 toEntity가 없으므로 직접 변환
+        User userToUpdate = User.builder()
+                .id(id)
+                .username(dto.getUsername())
+                .password(dto.getPassword())
+                .email(dto.getEmail())
+                .build();
+        User updatedUser = userService.updateUser(userToUpdate);
         logger.info("사용자 수정 완료: {}", updatedUser.getUsername());
-        return ResponseEntity.ok(new UserDto(updatedUser.getId(),
-                updatedUser.getUsername(),
-                updatedUser.getEmail()));
+        return ResponseEntity.ok(UserDto.fromEntity(updatedUser));
     }
 
 

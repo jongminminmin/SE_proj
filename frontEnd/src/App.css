@@ -36,3 +36,16 @@
     transform: rotate(360deg);
   }
 }
+
+/* Layout for pages with a sidebar */
+.layout-with-sidebar {
+  display: flex;
+}
+
+.main-content {
+  flex-grow: 1;
+  padding: 20px;
+  margin-left: 260px; /* Same as sidebar width */
+  width: calc(100% - 260px); /* Adjust width considering the sidebar */
+  min-height: 100vh;
+}

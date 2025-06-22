@@ -10,6 +10,7 @@ public class TaskDTO {
     private UserDto assignee;
     private String taskTitle;
     private String description;
+    private String status;
     private Date dueStart;
     private Date dueEnd;
     private String taskContent;

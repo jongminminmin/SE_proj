@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Navigate, Outlet, Route, Routes, useNavigate } from 'react-router-dom';
+import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import './App.css';
 import Login from './pages/Login';
 import FindAccount from './pages/FindAccount';
@@ -10,6 +10,7 @@ import Chat from './pages/Chat';
 import Settings from './pages/Settings';
 import { NotificationProvider } from './NotificationContext';
 import GlobalNotificationDisplay from './GlobalNotificationDisplay';
+import Sidebar from './components/Sidebar';
 
 const AuthContext = createContext(null);
 
@@ -49,11 +50,19 @@ const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    // setCurrentUser(null) 호출 시 NotificationContext의 useEffect가
-    // 자동으로 웹소켓 연결을 해제하므로 직접 호출할 필요가 없습니다.
-    await fetch('/logout', { method: 'POST', credentials: 'include' });
-    setCurrentUser(null);
-    navigate('/login');
+    try {
+      await fetch('/api/auth/logout', { 
+        method: 'POST', 
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      console.error('Logout failed:', error);
+    } finally {
+      setCurrentUser(null);
+      navigate('/login');
+    }
   };
 
   const value = { currentUser, login, logout, isLoading };
@@ -67,32 +76,45 @@ const AuthProvider = ({ children }) => {
 
 export const useAuth = () => useContext(AuthContext);
 
+const SidebarLayout = () => {
+  const { currentUser, logout } = useAuth();
+  return (
+    <div className="layout-with-sidebar">
+      <Sidebar user={currentUser} onLogout={logout} />
+      <main className="main-content">
+        <Outlet />
+      </main>
+    </div>
+  );
+};
+
 const ProtectedRoute = () => {
   const { currentUser, isLoading } = useAuth();
-  if (isLoading) return <div>애플리케이션 로딩 중...</div>;
-  return currentUser ? <Outlet /> : <Navigate to="/login" replace />;
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+  
+  return currentUser ? <SidebarLayout /> : <Navigate to="/login" replace />;
 };
 
 function App() {
   return (
       <AuthProvider>
         <NotificationProvider>
-          <div className="App">
-            <GlobalNotificationDisplay />
-            <Routes>
-              <Route path="/" element={<Login />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/find-account" element={<FindAccount />} />
-              <Route path="/register" element={<Register />} />
+          <GlobalNotificationDisplay />
+          <Routes>
+            <Route path="/" element={<Login />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/find-account" element={<FindAccount />} />
+            <Route path="/register" element={<Register />} />
 
-              <Route element={<ProtectedRoute />}>
-                <Route path="/main" element={<Main />} />
-                <Route path="/task" element={<Task />} />
-                <Route path="/chat" element={<Chat />} />
-                <Route path="/settings" element={<Settings />} />
-              </Route>
-            </Routes>
-          </div>
+            <Route element={<ProtectedRoute />}>
+              <Route path="/main" element={<Main />} />
+              <Route path="/task" element={<Task />} />
+              <Route path="/chat" element={<Chat />} />
+              <Route path="/settings" element={<Settings />} />
+            </Route>
+          </Routes>
         </NotificationProvider>
       </AuthProvider>
   );

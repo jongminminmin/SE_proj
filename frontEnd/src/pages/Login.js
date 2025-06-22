@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
+import { useAuth } from '../App';
+
 const googleLogo = 'https://developers.google.com/identity/images/g-logo.png';
 
 function Login() {
     const navigate = useNavigate();
+    const { login } = useAuth();
     // 로그인 폼 상태
     const [userId, setUserId] = useState('');
     const [password, setPassword] = useState('');
@@ -37,19 +40,25 @@ function Login() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId, password }),
-                credentials: 'include'
             });
 
             if (!response.ok) {
                 setLoginError(true);
                 return;
             }
-            const data = await response.json();
-            if (data.token) {
-                localStorage.setItem('token', data.token);
+            
+            // 로그인 성공 시, 서버로부터 사용자 정보를 다시 받아와서 상태 업데이트
+            const userResponse = await fetch('/api/users/me');
+            if (userResponse.ok) {
+                const userData = await userResponse.json();
+                login(userData); // AuthProvider의 login 함수 호출하여 전역 상태 업데이트
+                navigate('/main');
+            } else {
+                setLoginError(true);
             }
-            navigate('/main');
+
         } catch (error) {
+            console.error("Login process failed:", error);
             setLoginError(true);
         }
     };

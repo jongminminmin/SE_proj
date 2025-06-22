@@ -127,7 +127,9 @@
   border-bottom: 1px solid #e0e0e0;
 }
 .titleBox {
-  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 .title {
   font-size: 24px;
@@ -498,4 +500,23 @@
 
 .kanban-hover .kanban-add-btn {
   display: inline-block !important;
+}
+
+.inviteBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #e0e7ff;
+  color: #3730a3;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.inviteBtn:hover {
+  background-color: #c7d2fe;
 } 

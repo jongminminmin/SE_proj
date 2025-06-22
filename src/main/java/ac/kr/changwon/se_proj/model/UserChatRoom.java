@@ -40,4 +40,10 @@ public class UserChatRoom implements Serializable {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "last_read_message_id") // 마지막으로 읽은 메시지 ID (NULL 허용)
     private ChatMessage lastReadMessage; // 해당 사용자가 이 방에서 마지막으로 읽은 메시지
+
+    public UserChatRoom(User user, ChatRoom chatRoom) {
+        this.user = user;
+        this.chatRoom = chatRoom;
+        this.unreadCount = 0; // 기본값 설정
+    }
 }

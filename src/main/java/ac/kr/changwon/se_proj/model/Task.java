@@ -10,6 +10,8 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.Temporal;
 import java.util.Date;
+import java.util.ArrayList;
+import java.util.List;
 
 
 @Entity
@@ -20,12 +22,14 @@ import java.util.Date;
 public class Task {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int taskNo;
+    @Column(name = "task_no")
+    private Integer taskNo;
 
-    @JoinColumn(name = "project_id")
-    private Integer projectId; // FK to Project.project_id
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id", nullable = false)
+    private Project project;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assignee_id")
     private User assignee;
 
@@ -33,6 +37,9 @@ public class Task {
     private String taskTitle;
 
     private String description;
+
+    @Column(name = "status")
+    private String status;
 
     @Column(name = "due_start")
     private Date dueStart;
@@ -46,6 +53,9 @@ public class Task {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<Comment> comments = new ArrayList<>();
 
     @PrePersist
     public void onCreate() {

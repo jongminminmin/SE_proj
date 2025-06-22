@@ -46,9 +46,8 @@ public class User implements Serializable {
     @Transient
     private boolean isNew = false;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name ="project_id")
-    private Project project;
+    @ManyToMany(mappedBy = "members")
+    private Set<Project> projects = new HashSet<>();
 
 
     // 비밀번호 재설정 토큰 필드 추가

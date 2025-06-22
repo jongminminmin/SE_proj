@@ -27,11 +27,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
 
-;
-
 /* 로그인 컨트롤러
 * 요청 시 로그인 페이지로 이동 */
-@Controller
+@RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
@@ -44,6 +42,16 @@ public class AuthController {
     public AuthController(AuthService authService, AuthenticationManager authenticationManager) {
         this.authService = authService;
         this.authenticationManager = authenticationManager;
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserDto> getCurrentUser(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String userId = authentication.getName();
+        UserDto userDto = authService.getUserById(userId);
+        return ResponseEntity.ok(userDto);
     }
 
     @PostMapping("/login")
@@ -150,7 +158,6 @@ public class AuthController {
 
     // 아이디 찾기 엔드포인트
     @PostMapping("/find/id")
-    @ResponseBody // JSON 응답을 위해 추가
     public ResponseEntity<Map<String, Object>> findUserId(@RequestBody FindIdRequestDto findIdRequestDto) {
         logger.info("Find ID attempt for email: {}", findIdRequestDto.getEmail());
         if (findIdRequestDto.getEmail() == null || findIdRequestDto.getEmail().isBlank()) {
@@ -168,9 +175,9 @@ public class AuthController {
         }
     }
 
+    /*
     // 비밀번호 찾기(재설정 전 사용자 확인 및 토큰 발급) 엔드포인트
     @PostMapping("/find/password")
-    @ResponseBody
     public ResponseEntity<Map<String, Object>> findPasswordAndGenerateToken(@RequestBody FindPasswordRequestDto findPasswordRequestDto) {
         logger.info("Find password (user check and token generation) attempt for userId: {}", findPasswordRequestDto.getUserId());
         if (findPasswordRequestDto.getUserId() == null || findPasswordRequestDto.getUserId().isBlank() ||
@@ -203,10 +210,10 @@ public class AuthController {
                     .body(Map.of("success", false, "message", "입력하신 정보와 일치하는 사용자를 찾을 수 없습니다."));
         }
     }
+    */
 
 
     @ExceptionHandler(MethodArgumentNotValidException.class) // @RequestBody + @Valid 사용 시 유효성 검사 실패 처리
-    @ResponseBody
     public ResponseEntity<Map<String,String>> handleValidationException(MethodArgumentNotValidException ex){
         Map<String,String> error = new HashMap<>();
         ex.getBindingResult().getFieldErrors()

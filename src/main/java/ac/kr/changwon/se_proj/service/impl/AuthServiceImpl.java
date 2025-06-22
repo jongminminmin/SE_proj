@@ -11,6 +11,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.authentication.AuthenticationManager;
+import ac.kr.changwon.se_proj.dto.UserDto;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -24,6 +26,7 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder; // 회원가입 시 사용
+    private final AuthenticationManager authenticationManager;
 
     @Override
     public boolean login(String userId, String password) {
@@ -65,6 +68,12 @@ public class AuthServiceImpl implements AuthService {
         return true;
     }
 
+    @Override
+    public UserDto getUserById(String userId) {
+        return userRepository.findByid(userId)
+                .map(UserDto::fromEntity)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+    }
 
     @Override
     public String findUserIdByEmail(FindIdRequestDto findIdRequestDto) {
@@ -74,28 +83,8 @@ public class AuthServiceImpl implements AuthService {
         return Objects.requireNonNull(userOptional.map(User::getId).orElse(null));
     }
 
-    @Override
-    public String generatePasswordResetToken(FindPasswordRequestDto findPasswordRequestDto) {
-        Optional<User> userOptional = userRepository.findByIdAndEmail(
-                findPasswordRequestDto.getUserId(),
-                findPasswordRequestDto.getEmail()
-        );
-
-        if (userOptional.isPresent()) {
-            User user = userOptional.get();
-            String token = UUID.randomUUID().toString();
-
-             user.setPasswordResetToken(token);
-             user.setPasswordResetTokenExpiry(LocalDateTime.now().plusHours(1)); // 예: 1시간 후 만료
-             userRepository.save(user);
-
-
-            // User 엔티티에 해당 필드가 없다면, 이 부분은 주석 처리하거나 User 엔티티를 수정해야 합니다.
-            // 현재는 토큰만 생성하여 반환하는 것으로 가정합니다. 실제로는 DB에 저장해야 합니다.
-            // 이메일 발송 로직은 여기서 처리하지 않고, 컨트롤러나 별도 서비스에서 이 토큰을 사용합니다.
-            System.out.println("Generated password reset token for user " + user.getId() + ": " + token); // 실제 운영에서는 로깅 프레임워크 사용
-            return token; // 생성된 토큰 반환
-        }
-        return null; // 사용자가 존재하지 않으면 null 반환
-    }
+    // @Override
+    // public String generatePasswordResetToken(FindPasswordRequestDto findPasswordRequestDto) {
+    //     // ... (관련 로직 주석 처리)
+    // }
 }

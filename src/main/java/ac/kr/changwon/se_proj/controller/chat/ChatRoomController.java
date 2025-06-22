@@ -16,11 +16,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,19 +43,16 @@ public class ChatRoomController {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @GetMapping("/my-rooms")
-    public ResponseEntity<List<ChatRoomDTO>> getMyChatRooms(@AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        String username = userDetails.getUsername();
-        User currentUser = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public ResponseEntity<List<ChatRoomDTO>> getMyChatRooms(Authentication authentication) {
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String userId = userDetails.getUsername();
+        User currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
 
         List<ChatRoom> rooms = chatRoomService.getChatRoomsByUserId(currentUser.getId());
 
         List<ChatRoomDTO> roomDTOS = rooms.stream()
                 .map(room -> {
-                    // 현재 사용자 기준의 unreadCount를 UserChatRoom에서 가져옵니다.
                     Optional<UserChatRoom> currentUserChatRoom = room.getUserChatRooms().stream()
                             .filter(ucr -> ucr.getUser().getId().equals(currentUser.getId()))
                             .findFirst();
@@ -67,14 +65,14 @@ public class ChatRoomController {
                             room.getDescription(),
                             room.getLastMessage(),
                             room.getLastMessageTime() != null ? room.getLastMessageTime().format(FORMATTER) : "",
-                            (long) room.getUserChatRooms().size(), // 참여자 수는 UserChatRoom의 개수로 계산
-                            unreadCount, // 현재 사용자 기준의 unreadCount
+                            (long) room.getUserChatRooms().size(),
+                            unreadCount,
                             room.getColor()
                     );
                 })
                 .collect(Collectors.toList());
 
-        log.info("사용자 {}의 채팅방 {}개 조회 완료", username, roomDTOS.size());
+        log.info("사용자 {}의 채팅방 {}개 조회 완료", userId, roomDTOS.size());
         return ResponseEntity.ok(roomDTOS);
     }
 
@@ -88,55 +86,8 @@ public class ChatRoomController {
 
         ChatRoom chatRoom = chatRoomService.createOrGetPrivateChatRoom(user1, user2);
 
-        // 1:1 방 생성/입장 시, 본인의 unreadCount를 0으로 초기화
-        chatRoomService.markMessagesAsRead(chatRoom.getId(), user1.getId()); // user1이 현재 사용자라고 가정
+        chatRoomService.markMessagesAsRead(chatRoom.getId(), user1.getId());
 
-        // 생성되거나 찾아진 채팅방 정보를 DTO로 변환하여 반환
-        ChatRoomDTO chatRoomDTO = new ChatRoomDTO(
-                chatRoom.getId(),
-                chatRoom.getIntId(),
-                chatRoom.getName(),
-                chatRoom.getDescription(),
-                chatRoom.getLastMessage(),
-                chatRoom.getLastMessageTime() != null ? chatRoom.getLastMessageTime().format(FORMATTER) : "",
-                (long) chatRoom.getUserChatRooms().size(), // 참여자 수는 UserChatRoom의 개수로 계산
-                0, // 새로 입장했으므로 unreadCount는 0으로 설정
-                chatRoom.getColor()
-        );
-
-        return ResponseEntity.ok(chatRoomDTO);
-    }
-
-    @PostMapping("/create-room")
-    public ResponseEntity<ChatRoomDTO> createRoom(@RequestBody ChatRoomCreationRequest request, @AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        String username = userDetails.getUsername();
-        User creator = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        ChatRoom chatRoom;
-
-        // type에 따른 분기 처리
-        if ("PRIVATE".equals(request.getType())) {
-            // 1:1 채팅방 생성 (기존 로직 활용)
-            if (request.getUser2Id() == null) {
-                return ResponseEntity.badRequest().build();
-            }
-            User user2 = userRepository.findById(request.getUser2Id())
-                    .orElseThrow(() -> new RuntimeException("User 2 not found"));
-            chatRoom = chatRoomService.createOrGetPrivateChatRoom(creator, user2);
-        } else if ("GROUP".equals(request.getType())) {
-            // 그룹 채팅방 생성 (새로운 로직 필요)
-            chatRoom = chatRoomService.createGroupChatRoom(request, creator);
-        } else {
-            log.error("잘못된 채팅방 타입: {}", request.getType());
-            return ResponseEntity.badRequest().build();
-        }
-
-        // DTO 변환 후 반환
         ChatRoomDTO chatRoomDTO = new ChatRoomDTO(
                 chatRoom.getId(),
                 chatRoom.getIntId(),
@@ -145,7 +96,52 @@ public class ChatRoomController {
                 chatRoom.getLastMessage(),
                 chatRoom.getLastMessageTime() != null ? chatRoom.getLastMessageTime().format(FORMATTER) : "",
                 (long) chatRoom.getUserChatRooms().size(),
-                0, // 새로 생성했으므로 unreadCount는 0
+                0,
+                chatRoom.getColor()
+        );
+
+        return ResponseEntity.ok(chatRoomDTO);
+    }
+
+    @PostMapping("/create")
+    public ResponseEntity<ChatRoomDTO> createRoom(@RequestBody ChatRoomCreationRequest request, Authentication authentication) {
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String creatorId = userDetails.getUsername();
+        User creator = userRepository.findById(creatorId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + creatorId));
+
+        List<User> members = new ArrayList<>();
+        for (String memberId : request.getParticipants()) {
+            User member = userRepository.findById(memberId)
+                    .orElseThrow(() -> new RuntimeException("User not found with id: " + memberId));
+            members.add(member);
+        }
+
+        ChatRoom chatRoom;
+
+        if ("PRIVATE".equals(request.getType())) {
+            if (request.getUser2Id() == null) {
+                return ResponseEntity.badRequest().build();
+            }
+            User user2 = userRepository.findById(request.getUser2Id())
+                    .orElseThrow(() -> new RuntimeException("User 2 not found"));
+            chatRoom = chatRoomService.createOrGetPrivateChatRoom(creator, user2);
+        } else if ("GROUP".equals(request.getType())) {
+            chatRoom = chatRoomService.createGroupChatRoom(request, creator);
+        } else {
+            log.error("잘못된 채팅방 타입: {}", request.getType());
+            return ResponseEntity.badRequest().build();
+        }
+
+        ChatRoomDTO chatRoomDTO = new ChatRoomDTO(
+                chatRoom.getId(),
+                chatRoom.getIntId(),
+                chatRoom.getName(),
+                chatRoom.getDescription(),
+                chatRoom.getLastMessage(),
+                chatRoom.getLastMessageTime() != null ? chatRoom.getLastMessageTime().format(FORMATTER) : "",
+                (long) chatRoom.getUserChatRooms().size(),
+                0,
                 chatRoom.getColor()
         );
 
@@ -153,10 +149,9 @@ public class ChatRoomController {
         return ResponseEntity.ok(chatRoomDTO);
     }
 
-    // 특정 채팅방의 메시지 기록 조회
     @GetMapping("/rooms/{roomId}/messages")
-    public ResponseEntity<List<ChatMessageDTO>> getChatMessages(@PathVariable String roomId, @AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails == null) {
+    public ResponseEntity<List<ChatMessageDTO>> getChatMessages(@PathVariable String roomId, Authentication authentication) {
+        if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
@@ -176,15 +171,15 @@ public class ChatRoomController {
         return ResponseEntity.ok(messageDTOS);
     }
 
-    // 특정 채팅방의 메시지를 읽음 처리 (unreadCount 0으로 초기화)
     @PostMapping("/rooms/{roomId}/mark-as-read")
-    public ResponseEntity<Void> markChatRoomAsRead(@PathVariable String roomId, @AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails == null) {
+    public ResponseEntity<Void> markChatRoomAsRead(@PathVariable String roomId, Authentication authentication) {
+        if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        String userId = userRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"))
-                .getId();
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String userId = userDetails.getUsername();
+        userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
 
         chatRoomService.markMessagesAsRead(roomId, userId);
         log.info("채팅방 {}의 메시지가 사용자 {}에 의해 읽음 처리되었습니다.", roomId, userId);
@@ -192,23 +187,20 @@ public class ChatRoomController {
     }
 
     @DeleteMapping("/rooms/{roomId}")
-    public ResponseEntity<Void> deleteChatRoom(@PathVariable String roomId, @AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails == null) {
+    public ResponseEntity<Void> deleteChatRoom(@PathVariable String roomId, Authentication authentication) {
+        if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        String username = userDetails.getUsername();
-        User currentUser = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String userId = userDetails.getUsername();
+        userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
 
-        // 권한 체크 (예: 방장만 삭제 가능하도록 하려면 추가 로직 필요)
         ChatRoom chatRoom = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new RuntimeException("ChatRoom not found"));
 
-        // 실제 서비스에서는 추가 권한 체크 필요
-        // 예: if (!chatRoom.getOwner().equals(currentUser)) { return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); }
-
         chatRoomRepository.delete(chatRoom);
-        log.info("채팅방 {} 삭제 완료 (삭제자: {})", roomId, username);
+        log.info("채팅방 {} 삭제 완료 (삭제자: {})", roomId, userId);
 
         return ResponseEntity.noContent().build();
     }
@@ -216,9 +208,9 @@ public class ChatRoomController {
     @GetMapping("/rooms/{roomId}/participants")
     public ResponseEntity<List<Map<String, Object>>> getRoomParticipants(
             @PathVariable String roomId,
-            @AuthenticationPrincipal UserDetails userDetails) {
+            Authentication authentication) {
 
-        if (userDetails == null) {
+        if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
@@ -226,7 +218,6 @@ public class ChatRoomController {
             ChatRoom chatRoom = chatRoomRepository.findById(roomId)
                     .orElseThrow(() -> new RuntimeException("ChatRoom not found"));
 
-            // UserChatRoom을 통해 참여자 목록 가져오기
             List<Map<String, Object>> participants = chatRoom.getUserChatRooms().stream()
                     .map(ucr -> {
                         User user = ucr.getUser();
