@@ -1,9 +1,7 @@
 package ac.kr.changwon.se_proj.controller.login;
 
 import ac.kr.changwon.se_proj.config.TestSecurityConfig; // 테스트 설정 Import
-import ac.kr.changwon.se_proj.dto.FindIdRequestDto;
 import ac.kr.changwon.se_proj.dto.FindPasswordRequestDto;
-import ac.kr.changwon.se_proj.dto.UserDto;
 import ac.kr.changwon.se_proj.service.Interface.AuthService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;

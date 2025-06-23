@@ -1,7 +1,7 @@
 package ac.kr.changwon.se_proj.controller;
 
 import ac.kr.changwon.se_proj.dto.CommentDTO;
-import ac.kr.changwon.se_proj.service.CommentService;
+import ac.kr.changwon.se_proj.service.Interface.CommentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

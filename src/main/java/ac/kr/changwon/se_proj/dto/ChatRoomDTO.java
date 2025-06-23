@@ -11,6 +11,7 @@ public class ChatRoomDTO {
     private String id;
     private int intId;
     private String name;
+    private String type;
     private String description;
     private String lastMessage;
     private String lastMessageTime;

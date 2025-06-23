@@ -1,4 +1,4 @@
-package ac.kr.changwon.se_proj; // src/test/java 아래의 config 패키지에 위치
+package ac.kr.changwon.se_proj.config; // src/test/java 아래의 config 패키지에 위치
 
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;

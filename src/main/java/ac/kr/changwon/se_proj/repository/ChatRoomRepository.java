@@ -2,7 +2,9 @@ package ac.kr.changwon.se_proj.repository;
 
 import ac.kr.changwon.se_proj.model.ChatRoom;
 import ac.kr.changwon.se_proj.model.User;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -12,6 +14,11 @@ import java.util.Optional;
 
 @Repository
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, String> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT cr FROM ChatRoom cr WHERE cr.id = :id")
+    Optional<ChatRoom> findByIdWithPessimisticLock(@Param("id") String id);
+
     // 특정 User가 참여하는 모든 ChatRoom을 찾습니다 (UserChatRoom 조인)
     @Query("SELECT DISTINCT cr FROM ChatRoom cr JOIN cr.userChatRooms ucr WHERE ucr.user = :user")
     List<ChatRoom> findByParticipantsContaining(@Param("user") User user);
@@ -25,4 +32,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, String> {
 
     // 가장 큰 intId를 가진 ChatRoom을 찾는 메서드
     Optional<ChatRoom> findTopByOrderByIntIdDesc();
+
+    @Query("SELECT cr FROM ChatRoom cr JOIN FETCH cr.userChatRooms ucr JOIN FETCH ucr.user WHERE cr.id = :id")
+    Optional<ChatRoom> findByIdWithParticipants(@Param("id") String id);
 }

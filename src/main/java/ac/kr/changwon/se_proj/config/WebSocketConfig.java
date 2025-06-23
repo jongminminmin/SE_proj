@@ -53,6 +53,49 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
+
+                .addInterceptors(new HandshakeInterceptor() {
+                    @Override
+                    public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
+                                                   WebSocketHandler wsHandler, Map<String, Object> attributes) throws Exception {
+                        if (request instanceof ServletServerHttpRequest) {
+                            ServletServerHttpRequest servletRequest = (ServletServerHttpRequest) request;
+
+                            // === 수정 부분: getNativeRequest() 대신 getServletRequest() 사용 ===
+                            HttpServletRequest httpServletRequest = servletRequest.getServletRequest();
+                            Principal principal = httpServletRequest.getUserPrincipal();
+
+                            if (principal != null) {
+                                attributes.put(StompHeaderAccessor.USER_HEADER, principal);
+                                logger.debug("HandshakeInterceptor: Principal {} found in HTTP session and set to WebSocket attributes.", principal.getName());
+                                return true;
+                            } else {
+                                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                                if(authentication != null && authentication.isAuthenticated() && authentication.getPrincipal() instanceof UserDetails){
+                                    Principal securityPrincipal = authentication;
+                                    attributes.put(StompHeaderAccessor.USER_HEADER, securityPrincipal);
+                                    logger.debug("HandshakeInterceptor: Authenticated Principal {} found in SecurityContextHolder and set to WebSocket attributes.", securityPrincipal.getName());
+                                    return true;
+                                } else {
+                                    logger.warn("HandshakeInterceptor: No authenticated Principal found for WebSocket handshake. SessionId: {}. This might result in a 400 Bad Request.", httpServletRequest.getSession(false) != null ? httpServletRequest.getSession(false).getId() : "N/A");
+                                    return true;
+                                }
+                            }
+                        }
+                        logger.warn("HandshakeInterceptor: Request is not ServletServerHttpRequest. Skipping Principal transfer.");
+                        return true;
+                    }
+
+                    @Override
+                    public void afterHandshake(ServerHttpRequest request, ServerHttpResponse response,
+                                               WebSocketHandler wsHandler, Exception exception) {
+                        if (exception != null) {
+                            logger.error("HandshakeInterceptor: WebSocket handshake failed: {}", exception.getMessage(), exception);
+                        } else {
+                            logger.debug("HandshakeInterceptor: WebSocket handshake completed.");
+                        }
+                    }
+                })
                 .setAllowedOriginPatterns("*");
     }
 
@@ -87,48 +130,5 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 return message;
             }
         });
-    }
-
-    private class HttpHandshakeInterceptor implements HandshakeInterceptor {
-        @Override
-        public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
-                                       WebSocketHandler wsHandler, Map<String, Object> attributes) throws Exception {
-            if (request instanceof ServletServerHttpRequest) {
-                ServletServerHttpRequest servletRequest = (ServletServerHttpRequest) request;
-
-                // === 수정 부분: getNativeRequest() 대신 getServletRequest() 사용 ===
-                HttpServletRequest httpServletRequest = servletRequest.getServletRequest();
-                Principal principal = httpServletRequest.getUserPrincipal();
-
-                if (principal != null) {
-                    attributes.put(StompHeaderAccessor.USER_HEADER, principal);
-                    logger.debug("HandshakeInterceptor: Principal {} found in HTTP session and set to WebSocket attributes.", principal.getName());
-                    return true;
-                } else {
-                    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-                    if(authentication != null && authentication.isAuthenticated() && authentication.getPrincipal() instanceof UserDetails){
-                        Principal securityPrincipal = authentication;
-                        attributes.put(StompHeaderAccessor.USER_HEADER, securityPrincipal);
-                        logger.debug("HandshakeInterceptor: Authenticated Principal {} found in SecurityContextHolder and set to WebSocket attributes.", securityPrincipal.getName());
-                        return true;
-                    } else {
-                        logger.warn("HandshakeInterceptor: No authenticated Principal found for WebSocket handshake. SessionId: {}. This might result in a 400 Bad Request.", httpServletRequest.getSession(false) != null ? httpServletRequest.getSession(false).getId() : "N/A");
-                        return true;
-                    }
-                }
-            }
-            logger.warn("HandshakeInterceptor: Request is not ServletServerHttpRequest. Skipping Principal transfer.");
-            return true;
-        }
-
-        @Override
-        public void afterHandshake(ServerHttpRequest request, ServerHttpResponse response,
-                                   WebSocketHandler wsHandler, Exception exception) {
-            if (exception != null) {
-                logger.error("HandshakeInterceptor: WebSocket handshake failed: {}", exception.getMessage(), exception);
-            } else {
-                logger.debug("HandshakeInterceptor: WebSocket handshake completed.");
-            }
-        }
     }
 }

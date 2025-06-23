@@ -23,11 +23,11 @@ public class ChatController {
         this.chatMessageService = chatMessageService;
     }
 
-    @MessageMapping("/chat.send")
-    @SendTo("/topic/messages")
-    public ChatMessage sendMessage(ChatMessage message) {
+    //@MessageMapping("/chat.send")
+   // @SendTo("/topic/messages")
+    /*public ChatMessage sendMessage(ChatMessage message) {
         message.setTimestamp(LocalDateTime.now());
         return message;
-    }
+    }*/
 
 }

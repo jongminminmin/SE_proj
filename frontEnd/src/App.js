@@ -12,6 +12,8 @@ import { NotificationProvider } from './NotificationContext';
 import GlobalNotificationDisplay from './GlobalNotificationDisplay';
 import Sidebar from './components/Sidebar';
 
+import * as stompService from './services/stompService'
+
 const AuthContext = createContext(null);
 
 const AuthProvider = ({ children }) => {
@@ -19,24 +21,29 @@ const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
+  //웹소켓 제어 로직
+  useEffect(() => {
+    if(currentUser){
+      stompService.connect();
+    }
+    else if( !isLoading){
+      stompService.disconnect();
+    }
+  }, [currentUser, isLoading]);
+
+
   useEffect(() => {
     const checkAuthStatus = async () => {
       setIsLoading(true);
       try {
         const response = await fetch('/api/users/me', { credentials: 'include' });
         if (response.ok) {
-          const contentType = response.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            const userData = await response.json();
-            setCurrentUser(userData);
-          } else {
-            setCurrentUser(null);
-          }
+          const userData = await response.json();
+          setCurrentUser(userData);
         } else {
           setCurrentUser(null);
         }
       } catch (error) {
-        console.error("인증 상태 확인 오류:", error);
         setCurrentUser(null);
       } finally {
         setIsLoading(false);
@@ -51,12 +58,7 @@ const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await fetch('/api/auth/logout', { 
-        method: 'POST', 
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      await fetch('/api/auth/logout', { method: 'POST' });
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {
