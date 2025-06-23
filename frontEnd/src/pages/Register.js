@@ -21,9 +21,20 @@ function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // 회원가입 로직
-    setError(''); //오류 메시지 초기화
-    setSuccess(''); //성공 메시지 초기화
+    setError('');
+    setSuccess('');
+
+    // --- 비밀번호 유효성 검사 로직 추가 ---
+    const passwordRegex = /(?=.*[\W_])/; // 특수문자 또는 밑줄(_) 포함 여부
+    if (form.password.length < 8) {
+      setError('비밀번호는 최소 8자 이상이어야 합니다.');
+      return;
+    }
+    if (!passwordRegex.test(form.password)) {
+      setError('비밀번호에는 특수문자가 최소 하나 이상 포함되어야 합니다.');
+      return;
+    }
+    // --- 유효성 검사 로직 끝 ---
 
     try {
       const response = await fetch('/api/auth/register', {

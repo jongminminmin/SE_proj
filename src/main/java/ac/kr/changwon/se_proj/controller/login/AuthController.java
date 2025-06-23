@@ -3,6 +3,7 @@ package ac.kr.changwon.se_proj.controller.login;
 import ac.kr.changwon.se_proj.dto.FindIdRequestDto;
 import ac.kr.changwon.se_proj.dto.FindPasswordRequestDto;
 import ac.kr.changwon.se_proj.dto.LoginRequestDTO;
+import ac.kr.changwon.se_proj.dto.ResetPasswordRequestDto;
 import ac.kr.changwon.se_proj.dto.UserDto;
 import ac.kr.changwon.se_proj.service.Interface.AuthService;
 import jakarta.servlet.http.HttpSession;
@@ -175,43 +176,48 @@ public class AuthController {
         }
     }
 
-    /*
-    // 비밀번호 찾기(재설정 전 사용자 확인 및 토큰 발급) 엔드포인트
+    // 비밀번호 찾기(사용자 확인) 엔드포인트
     @PostMapping("/find/password")
-    public ResponseEntity<Map<String, Object>> findPasswordAndGenerateToken(@RequestBody FindPasswordRequestDto findPasswordRequestDto) {
-        logger.info("Find password (user check and token generation) attempt for userId: {}", findPasswordRequestDto.getUserId());
+    public ResponseEntity<Map<String, Object>> verifyUserForPasswordReset(@RequestBody FindPasswordRequestDto findPasswordRequestDto) {
+        logger.info("Find password (user verification) attempt for userId: {}", findPasswordRequestDto.getUserId());
         if (findPasswordRequestDto.getUserId() == null || findPasswordRequestDto.getUserId().isBlank() ||
                 findPasswordRequestDto.getEmail() == null || findPasswordRequestDto.getEmail().isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "아이디와 이메일을 모두 입력해주세요."));
         }
 
-        // AuthService의 generatePasswordResetToken 메서드는 String 타입의 토큰을 반환합니다.
-        String resetToken = authService.generatePasswordResetToken(findPasswordRequestDto);
+        boolean userExists = authService.verifyUserForPasswordReset(findPasswordRequestDto);
 
-        if (resetToken != null) {
-            // 토큰이 성공적으로 생성됨 (사용자 정보 일치)
-            // 중요: 실제 운영 환경에서는 생성된 토큰을 사용자에게 직접 반환하는 대신,
-            // 이 토큰을 포함한 비밀번호 재설정 링크를 이메일로 발송해야 합니다.
-            // 클라이언트에게는 이메일 발송 안내 메시지만 전달하는 것이 일반적입니다.
-            logger.info("Password reset token generated for user: userId={}, email={}. Token (for dev only): {}",
-                    findPasswordRequestDto.getUserId(), findPasswordRequestDto.getEmail(), resetToken);
-            // 클라이언트에게는 토큰 자체를 반환하지 않고, 안내 메시지만 전달합니다.
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "비밀번호 재설정 절차가 시작되었습니다. 이메일을 확인해주세요. (실제 이메일 발송 기능은 구현 필요)"
-                    // "token", resetToken // 개발/테스트 목적으로만 토큰을 반환하고, 실제 운영에서는 제거
-            ));
-        }
-        else {
-            // 사용자를 찾을 수 없거나 토큰 생성 실패
-            logger.warn("User not found for password reset or token generation failed: userId={}, email={}",
+        if (userExists) {
+            logger.info("User verified for password reset: {}", findPasswordRequestDto.getUserId());
+            return ResponseEntity.ok(Map.of("success", true));
+        } else {
+            logger.warn("User verification for password reset failed: userId={}, email={}",
                     findPasswordRequestDto.getUserId(), findPasswordRequestDto.getEmail());
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("success", false, "message", "입력하신 정보와 일치하는 사용자를 찾을 수 없습니다."));
         }
     }
-    */
 
+    // 비밀번호 재설정 엔드포인트
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, Object>> resetPassword(@RequestBody ResetPasswordRequestDto resetPasswordRequestDto) {
+        logger.info("Password reset attempt for userId: {}", resetPasswordRequestDto.getUserId());
+        // 입력 유효성 검사
+        if (resetPasswordRequestDto.getNewPassword() == null || resetPasswordRequestDto.getNewPassword().length() < 6) {
+             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "비밀번호는 6자 이상이어야 합니다."));
+        }
+        
+        boolean isSuccess = authService.resetPassword(resetPasswordRequestDto);
+
+        if (isSuccess) {
+            logger.info("Password has been reset successfully for userId: {}", resetPasswordRequestDto.getUserId());
+            return ResponseEntity.ok(Map.of("success", true, "message", "비밀번호가 성공적으로 변경되었습니다."));
+        } else {
+            logger.warn("Password reset failed for userId: {}. User not found with provided details.", resetPasswordRequestDto.getUserId());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("success", false, "message", "사용자 정보를 찾을 수 없어 비밀번호를 변경할 수 없습니다."));
+        }
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class) // @RequestBody + @Valid 사용 시 유효성 검사 실패 처리
     public ResponseEntity<Map<String,String>> handleValidationException(MethodArgumentNotValidException ex){

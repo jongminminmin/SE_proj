@@ -3,6 +3,8 @@ package ac.kr.changwon.se_proj.dto;
 import ac.kr.changwon.se_proj.model.User;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,7 +18,10 @@ import lombok.NoArgsConstructor;
 public class UserDto {
     @NotBlank private String id;
     @NotBlank private String username;
-    @NotBlank private String password;
+    @NotBlank(message = "비밀번호를 입력해주세요.")
+    @Size(min = 8, message = "비밀번호는 최소 8자 이상이어야 합니다.")
+    @Pattern(regexp = "(?=.*[\\W_]).+", message = "비밀번호에는 특수문자가 최소 하나 이상 포함되어야 합니다.")
+    private String password;
     @NotBlank private String email;
 
     public static UserDto fromEntity(User user){

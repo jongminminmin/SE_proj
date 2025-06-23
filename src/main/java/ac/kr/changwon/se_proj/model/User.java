@@ -11,21 +11,13 @@ import java.util.Set;
 
 @Entity
 @Table(name = "users")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
-@EqualsAndHashCode(of = "id")
-/* indicate for user.
-* username : nickname
-* id : user id for login
-* password : for login Authenticate
-* email : just e-mail*/
 public class User implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
-
 
     @Id
     @Column(length = 255
@@ -49,26 +41,16 @@ public class User implements Serializable {
     @ManyToMany(mappedBy = "members")
     private Set<Project> projects = new HashSet<>();
 
-
-    // 비밀번호 재설정 토큰 필드 추가
-    @Column(name = "password_reset_token")
-    private String passwordResetToken;
-
-    // 비밀번호 재설정 토큰 만료 시간 필드 추가
-    @Column(name = "password_reset_token_expiry")
-    private LocalDateTime passwordResetTokenExpiry;
-
-
-
     /** DB에서 로딩할 땐 new 플래그를 꺼줘야 함 */
     @PostLoad
     void markNotNew() {
         this.isNew = false;
     }
 
-    //public Object getUserId() {}
-
     // User와 UserChatRoom 간의 One-to-Many 관계 설정
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<UserChatRoom> userChatRooms = new HashSet<>();
+
+    @Column(name = "profile_img_url")
+    private String profile_img_url;
 }

@@ -99,12 +99,12 @@ public class UserController {
     public ResponseEntity<UserDto> createUser(@RequestBody UserDto dto) {
         logger.info("/api/users (생성) 호출됨. 요청 DTO: {}", dto);
         // UserDto에 toEntity가 없으므로 직접 변환
-        User userToSave = User.builder()
-                .id(dto.getId())
-                .username(dto.getUsername())
-                .password(dto.getPassword()) // 비밀번호 암호화는 서비스에서
-                .email(dto.getEmail())
-                .build();
+        User userToSave = new User();
+        userToSave.setId(dto.getId());
+        userToSave.setUsername(dto.getUsername());
+        userToSave.setPassword(dto.getPassword()); // 비밀번호 암호화는 서비스에서
+        userToSave.setEmail(dto.getEmail());
+
         User savedUser = userService.saveUser(userToSave);
         logger.info("사용자 생성 완료: {}", savedUser.getUsername());
         return ResponseEntity
@@ -119,12 +119,12 @@ public class UserController {
         logger.info("/api/users/{} (수정) 호출됨. 요청 DTO: {}", id, dto);
         dto.setId(id); // 경로 변수 ID를 DTO에 설정
         // UserDto에 toEntity가 없으므로 직접 변환
-        User userToUpdate = User.builder()
-                .id(id)
-                .username(dto.getUsername())
-                .password(dto.getPassword())
-                .email(dto.getEmail())
-                .build();
+        User userToUpdate = new User();
+        userToUpdate.setId(id);
+        userToUpdate.setUsername(dto.getUsername());
+        userToUpdate.setPassword(dto.getPassword());
+        userToUpdate.setEmail(dto.getEmail());
+        
         User updatedUser = userService.updateUser(userToUpdate);
         logger.info("사용자 수정 완료: {}", updatedUser.getUsername());
         return ResponseEntity.ok(UserDto.fromEntity(updatedUser));

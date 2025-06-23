@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.authentication.AuthenticationManager;
 import ac.kr.changwon.se_proj.dto.UserDto;
+import ac.kr.changwon.se_proj.dto.ResetPasswordRequestDto;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -83,8 +84,21 @@ public class AuthServiceImpl implements AuthService {
         return Objects.requireNonNull(userOptional.map(User::getId).orElse(null));
     }
 
-    // @Override
-    // public String generatePasswordResetToken(FindPasswordRequestDto findPasswordRequestDto) {
-    //     // ... (관련 로직 주석 처리)
-    // }
+    @Override
+    @Transactional(readOnly = true)
+    public boolean verifyUserForPasswordReset(FindPasswordRequestDto findPasswordRequestDto) {
+        return userRepository.findByIdAndEmail(findPasswordRequestDto.getUserId(), findPasswordRequestDto.getEmail()).isPresent();
+    }
+
+    @Override
+    @Transactional
+    public boolean resetPassword(ResetPasswordRequestDto resetPasswordRequestDto) {
+        return userRepository.findByIdAndEmail(resetPasswordRequestDto.getUserId(), resetPasswordRequestDto.getEmail())
+                .map(user -> {
+                    user.setPassword(passwordEncoder.encode(resetPasswordRequestDto.getNewPassword()));
+                    userRepository.save(user);
+                    return true;
+                })
+                .orElse(false);
+    }
 }
