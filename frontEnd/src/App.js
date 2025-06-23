@@ -9,7 +9,6 @@ import Task from './pages/Task';
 import Chat from './pages/Chat';
 import Settings from './pages/Settings';
 import { NotificationProvider } from './NotificationContext';
-import GlobalNotificationDisplay from './GlobalNotificationDisplay';
 import Sidebar from './components/Sidebar';
 
 import * as stompService from './services/stompService'
@@ -103,7 +102,6 @@ function App() {
   return (
       <AuthProvider>
         <NotificationProvider>
-          <GlobalNotificationDisplay />
           <Routes>
             <Route path="/" element={<Login />} />
             <Route path="/login" element={<Login />} />
