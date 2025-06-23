@@ -1,0 +1,157 @@
+/* MessageContainer.css */
+
+/* 메시지 컨테이너 전체 레이아웃 */
+.messages-container {
+    flex-grow: 1; /* 남은 공간을 모두 차지하도록 설정 */
+    display: flex;
+    flex-direction: column; /* 메시지 목록과 입력 폼을 세로로 배치 */
+    background-color: #f8f9fa; /* 은은한 배경색 */
+    overflow: hidden; /* 내부 요소가 넘치지 않도록 설정 */
+    border-left: 1px solid #e9ecef; /* 왼쪽 사이드바와 구분선 */
+}
+
+/* 메시지 목록 스타일 */
+.messages-list {
+    flex-grow: 1; /* 남은 공간을 모두 차지 */
+    overflow-y: auto; /* 메시지가 많아지면 스크롤 생성 */
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px; /* 메시지 아이템 사이의 간격 */
+}
+
+/* 개별 메시지 아이템 */
+.message-item {
+    display: flex;
+    align-items: flex-end; /* 아바타와 말풍선을 하단에 정렬 */
+    max-width: 75%; /* 메시지 최대 너비 */
+    gap: 10px; /* 아바타와 메시지 내용 사이 간격 */
+}
+
+/* 받은 메시지 스타일 (왼쪽 정렬) */
+.message-item.received {
+    align-self: flex-start; /* 왼쪽으로 붙임 */
+}
+
+/* 보낸 메시지 스타일 (오른쪽 정렬) */
+.message-item.sent {
+    align-self: flex-end; /* 오른쪽으로 붙임 */
+    flex-direction: row-reverse; /* 아바타와 내용 순서 변경 */
+}
+
+/* 사용자 아바타 (프로필 사진 대신 이니셜 표시) */
+.message-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #6c757d; /* 기본 배경색 */
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    flex-shrink: 0; /* 크기 줄어들지 않도록 설정 */
+}
+
+/* 메시지 내용 (말풍선, 보낸 사람, 시간 포함) */
+.message-content {
+    display: flex;
+    flex-direction: column;
+}
+
+/* 보낸 사람 이름 */
+.message-sender {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 4px;
+    padding: 0 4px;
+}
+
+.message-item.sent .message-sender {
+    align-self: flex-end; /* 보낸 메시지는 이름도 오른쪽 정렬 */
+}
+
+/* 메시지 말풍선 */
+.message-bubble {
+    padding: 12px 16px;
+    border-radius: 18px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    word-break: break-word; /* 긴 단어가 있어도 줄바꿈 */
+}
+
+.message-item.received .message-bubble {
+    background-color: #ffffff; /* 받은 메시지 배경색 */
+    border: 1px solid #e9ecef;
+    border-bottom-left-radius: 4px; /* 말꼬리 효과 */
+}
+
+.message-item.sent .message-bubble {
+    background-color: #007bff; /* 보낸 메시지 배경색 */
+    color: white;
+    border-bottom-right-radius: 4px; /* 말꼬리 효과 */
+}
+
+/* 메시지 보낸 시간 */
+.message-timestamp {
+    font-size: 0.75rem;
+    color: #adb5bd;
+    margin-top: 4px;
+    padding: 0 4px;
+}
+
+.message-item.sent .message-timestamp {
+    align-self: flex-end;
+}
+
+/* 메시지 입력 폼 스타일 */
+.message-input-form {
+    display: flex;
+    padding: 16px;
+    background-color: #ffffff;
+    border-top: 1px solid #dee2e6;
+    gap: 10px;
+}
+
+.message-input-form input {
+    flex-grow: 1;
+    border: 1px solid #ced4da;
+    border-radius: 20px;
+    padding: 10px 16px;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.message-input-form input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.message-input-form button {
+    border: none;
+    background-color: #007bff;
+    color: white;
+    font-weight: bold;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    flex-shrink: 0;
+    font-size: 0.9rem;
+}
+
+.message-input-form button:hover {
+    background-color: #0056b3;
+}
+
+/* 채팅방을 선택하지 않았을 때의 플레이스홀더 */
+.messages-container.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    font-size: 1.1rem;
+}
+

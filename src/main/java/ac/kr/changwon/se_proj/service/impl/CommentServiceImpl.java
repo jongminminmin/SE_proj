@@ -1,4 +1,4 @@
-package ac.kr.changwon.se_proj.service;
+package ac.kr.changwon.se_proj.service.impl;
 
 import ac.kr.changwon.se_proj.dto.CommentDTO;
 import ac.kr.changwon.se_proj.model.Comment;
@@ -7,6 +7,7 @@ import ac.kr.changwon.se_proj.model.User;
 import ac.kr.changwon.se_proj.repository.CommentRepository;
 import ac.kr.changwon.se_proj.repository.TaskRepository;
 import ac.kr.changwon.se_proj.repository.UserRepository;
+import ac.kr.changwon.se_proj.service.Interface.CommentService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,7 +57,7 @@ public class CommentServiceImpl implements CommentService {
     public CommentDTO updateComment(Long commentId, String content, String currentUsername) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new RuntimeException("Comment not found with id: " + commentId));
-        
+
         if (!comment.getAuthor().getUsername().equals(currentUsername)) {
             throw new SecurityException("You do not have permission to edit this comment.");
         }
@@ -78,4 +79,4 @@ public class CommentServiceImpl implements CommentService {
 
         commentRepository.delete(comment);
     }
-} 
+}
