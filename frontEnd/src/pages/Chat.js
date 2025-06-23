@@ -22,16 +22,15 @@ const Chat = () => {
 
     // 채팅방 목록 상태와 URL을 동기화하는 로직
     useEffect(() => {
-        // 채팅방 목록이 로드되지 않았으면 아무 작업도 하지 않습니다.
-        if (chatRooms.length === 0) return;
+        // 1. 채팅방 목록이 유효하게 로드되었고, 1개 이상 존재하는 경우
+        if (chatRooms && chatRooms.length > 0) {
+            const roomExists = chatRooms.some(room => room.id === currentChatRoomId);
 
-        const roomExists = chatRooms.some(room => room.id === currentChatRoomId);
-
-        // 현재 URL의 roomId가 유효하지 않고, 채팅방 목록이 있다면
-        if (!currentChatRoomId || !roomExists) {
-            // 목록의 첫 번째 유효한 방으로 URL을 변경하여 이동시킵니다.
-            const firstValidRoom = chatRooms[0];
-            navigate(`/chat?roomId=${firstValidRoom.id}`, { replace: true });
+            // 1-1. 현재 선택된 방이 없거나, 더 이상 존재하지 않는 방인 경우
+            if (!currentChatRoomId || !roomExists) {
+                // 안전하게 목록의 첫 번째 방으로 URL을 변경하여 이동시킵니다.
+                navigate(`/chat?roomId=${chatRooms[0].id}`, { replace: true });
+            }
         }
     }, [chatRooms, currentChatRoomId, navigate]);
 

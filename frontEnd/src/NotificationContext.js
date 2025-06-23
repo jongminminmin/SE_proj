@@ -92,7 +92,7 @@ export const NotificationProvider = ({ children }) => {
                 stompService.subscribe(destination, (payload) => onMessageReceivedRef.current?.(payload));
             });
         }
-    }, [isConnected]);
+    }, [isConnected, chatRooms]);
 
     // --- ▼▼▼ 여기가 핵심 수정 부분 ▼▼▼ ---
 
