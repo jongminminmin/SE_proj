@@ -1,6 +1,5 @@
 package ac.kr.changwon.se_proj.controller;
 
-
 import ac.kr.changwon.se_proj.model.Project;
 import ac.kr.changwon.se_proj.model.Task;
 import ac.kr.changwon.se_proj.model.User;
@@ -42,26 +41,22 @@ public class TaskController {
     }
 
     @PostMapping
-    public TaskDTO create(@RequestBody TaskRequestDTO requestDTO) {
-        Task createdTask = taskService.createTask(requestDTO);
-        TaskDTO createdTaskDTO = taskService.convertToDTO(createdTask);
-        sseService.sendToAll("tasks-updated", createdTaskDTO);
-        return createdTaskDTO;
+    public ResponseEntity<TaskDTO> create(@RequestBody TaskRequestDTO requestDTO) {
+        TaskDTO createdTaskDTO = taskService.createTask(requestDTO);
+        return ResponseEntity.ok(createdTaskDTO);
     }
 
     @PutMapping("/{id}")
-    public TaskDTO update(@PathVariable Integer id, @RequestBody Map<String, String> payload) {
+    public ResponseEntity<TaskDTO> update(@PathVariable Integer id, @RequestBody Map<String, String> payload) {
         String status = payload.get("status");
-        Task updatedTask = taskService.updateTaskStatus(id, status);
-        TaskDTO updatedTaskDTO = taskService.convertToDTO(updatedTask);
-        sseService.sendToAll("tasks-updated", updatedTaskDTO);
-        return updatedTaskDTO;
+        TaskDTO updatedTaskDTO = taskService.updateTaskStatus(id, status);
+        return ResponseEntity.ok(updatedTaskDTO);
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Integer id) {
-        taskService.deleteById(id);
-        sseService.sendToAll("tasks-updated", Map.of("deletedTaskId", id));
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        taskService.deleteTask(id);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/due-tomorrow")
@@ -70,12 +65,8 @@ public class TaskController {
     }
 
     @GetMapping("/project/{projectId}")
-    public ResponseEntity<List<TaskDTO>> getTasksByProjectId(@PathVariable Long projectId) {
-        List<Task> tasks = taskService.findByProjectId(projectId);
-        List<TaskDTO> taskDTOs = tasks.stream()
-                .map(taskService::convertToDTO)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(taskDTOs);
+    public List<TaskDTO> getTasksByProjectId(@PathVariable Long projectId) {
+        return taskService.findAllTasksByProjectId(projectId);
     }
 
 }

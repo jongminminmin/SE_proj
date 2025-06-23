@@ -228,6 +228,8 @@ const Task = () => {
     });
 
     if (response.ok) {
+      const createdTask = await response.json();
+      setTasks(prevTasks => [createdTask, ...prevTasks]);
       setShowTaskModal(false);
     } else {
       alert('업무 생성에 실패했습니다.');

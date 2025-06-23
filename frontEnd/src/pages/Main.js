@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useCallback} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {useAuth} from '../App';
 import styles from './Main.module.css';
@@ -16,6 +16,7 @@ function Main() {
   const [newProject, setNewProject] = useState({ projectTitle: '', description: '', date: '' });
   const [projects, setProjects] = useState([]);
   const [calendarValue, setCalendarValue] = useState(new Date());
+  const [notifications, setNotifications] = useState([]);
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { updateGlobalUnreadCount } = useNotifications();
@@ -33,15 +34,40 @@ function Main() {
     setProjects(data);
   };
 
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res = await fetch('/api/notifications');
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data);
+        updateGlobalUnreadCount();
+      } else {
+        console.error("Failed to fetch notifications");
+      }
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    }
+  }, [updateGlobalUnreadCount]);
+
   useEffect(() => {
     fetchProjects().catch(console.error);
-  }, []);
+    fetchNotifications();
 
-  const notifications = [
-    { id: 1, text: '새로운 할 일이 등록되었습니다.' },
-    { id: 2, text: '프로젝트 베타의 마감일이 다가옵니다.' },
-    { id: 3, text: '팀원이 댓글을 남겼습니다.' },
-  ];
+    const eventSource = new EventSource('/api/sse/subscribe');
+
+    eventSource.addEventListener('new-notification', (event) => {
+      fetchNotifications();
+    });
+
+    eventSource.onerror = (error) => {
+      console.error('SSE error:', error);
+      eventSource.close();
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [fetchNotifications]);
 
   const handleAddOrEditProject = async () => {
     if (!newProject.projectTitle.trim() || !newProject.date) {
@@ -156,7 +182,11 @@ function Main() {
               <div className={styles.notificationBox}>
                 <h3 className={styles.notificationTitle}>알림</h3>
                 <ul className={styles.notificationList}>
-                  {notifications.map(n => <li key={n.id} className={styles.notificationItem}>{n.text}</li>)}
+                  {notifications.length > 0 ? (
+                      notifications.map((msg, index) => <li key={index} className={styles.notificationItem}>{msg}</li>)
+                  ) : (
+                      <li className={styles.notificationItem}>새로운 알림이 없습니다.</li>
+                  )}
                 </ul>
               </div>
               <div className={styles.calendarBox}>

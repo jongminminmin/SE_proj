@@ -10,8 +10,8 @@ public interface TaskService {
     List<Task> findAll();
     Task findById(Integer id);
     Task save(Task task);
-    Task createTask(TaskRequestDTO taskRequestDTO);
-    Task updateTaskStatus(Integer taskId, String status);
+    TaskDTO createTask(TaskRequestDTO taskRequestDTO);
+    TaskDTO updateTaskStatus(Integer taskId, String status);
     void deleteById(Integer id);
 
     List<Task> findByProjectId(Long projectId);
@@ -19,4 +19,7 @@ public interface TaskService {
     List<Task> getTasksDueTomorrow();
 
     TaskDTO convertToDTO(Task task);
+
+    List<TaskDTO> findAllTasksByProjectId(Long projectId);
+    void deleteTask(Integer taskId);
 }

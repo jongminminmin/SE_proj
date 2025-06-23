@@ -2,16 +2,26 @@ package ac.kr.changwon.se_proj.dto;
 
 import lombok.Data;
 import java.util.Date;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
 
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
 public class TaskDTO {
-    private int taskNo;
-    private Integer projectId;
-    private UserDto assignee;
+    private Integer taskNo;
+    private Long projectId;
     private String taskTitle;
     private String description;
     private String status;
-    private Date dueStart;
-    private Date dueEnd;
-    private String taskContent;
+    private UserDto assignee;
+    private String dueEnd;
+
+    // 삭제된 태스크를 위한 필드
+    private Integer deletedTaskId;
+
+    public TaskDTO(Integer deletedTaskId) {
+        this.deletedTaskId = deletedTaskId;
+    }
 } 
